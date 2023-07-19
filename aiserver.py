@@ -611,7 +611,7 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 utils.flask_app = app
 
 Compress(app)
-socketio = SocketIO(app, async_method="eventlet", manage_session=False, cors_allowed_origins='*', max_http_buffer_size=10_000_000)
+socketio = SocketIO(app, async_method="eventlet", manage_session=True, cors_allowed_origins='*', max_http_buffer_size=10_000_000)
 #socketio = SocketIO(app, async_method="eventlet", manage_session=False, cors_allowed_origins='*', max_http_buffer_size=10_000_000, logger=logger, engineio_logger=True)
 logger.add(UI_2_log_history, serialize=True, colorize=True, enqueue=True, level="INFO")
 
