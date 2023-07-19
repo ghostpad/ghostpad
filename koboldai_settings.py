@@ -1507,8 +1507,6 @@ class KoboldStoryRegister(object):
                 for j in reversed(range(len(self.actions[i]["Options"]))):
                     if self.actions[i]["Options"][j]["text"] == text:
                         del self.actions[i]["Options"][j]
-            if old_text != "":
-                self.actions[i]["Options"].append({"text": old_text, "Pinned": False, "Previous Selection": False, "Edited": True})
         else:
             old_text = None
             old_length = None
