@@ -1,6 +1,10 @@
 import os, sys
 from typing import Optional
-from transformers import AutoConfig
+try:
+    from hf_bleeding_edge import AutoConfig
+except ImportError:
+    from transformers import AutoConfig
+
 import warnings
 import utils
 import json
@@ -15,8 +19,12 @@ class HFInferenceModel(InferenceModel):
     def __init__(self) -> None:
         super().__init__()
         self.model_config = None
-        #self.model_name = model_name
 
+        # TODO: model_name should probably be an instantiation parameter all the
+        # way down the inheritance chain.
+        self.model_name = None
+
+        self.path = None
         self.hf_torch = False
         self.model = None
         self.tokenizer = None
@@ -213,6 +221,11 @@ class HFInferenceModel(InferenceModel):
                 torch.cuda.empty_cache()
         except:
             pass
+    
+    def _pre_load(self) -> None:
+        # HACK: Make model instantiation work without UI parameters
+        self.model_name = self.model_name or utils.koboldai_vars.model
+        return super()._pre_load()
 
     def _post_load(self) -> None:
         self.badwordsids = koboldai_settings.badwordsids_default
@@ -326,6 +339,11 @@ class HFInferenceModel(InferenceModel):
                 if any(c in str(k) for c in "[]")
             ]
 
+            try:
+                self.badwordsids.remove([self.tokenizer.pad_token_id])
+            except:
+                pass
+            
             if utils.koboldai_vars.newlinemode == "n":
                 self.badwordsids.append([self.tokenizer.eos_token_id])
 
@@ -378,7 +396,17 @@ class HFInferenceModel(InferenceModel):
                 revision=utils.koboldai_vars.revision,
                 cache_dir="cache",
             )
+
             self.model_type = self.model_config.model_type
+
+            if "gptq_bits" in dir(self.model_config):
+                self.gptq_model = True
+                self.gptq_bits = self.model_config.gptq_bits
+                self.gptq_groupsize = self.model_config.gptq_groupsize if getattr(self.model_config, "gptq_groupsize", False) else -1
+                self.gptq_version = self.model_config.gptq_version if getattr(self.model_config, "gptq_version", False) else 1
+                self.gptq_file = None
+            else:
+                self.gptq_model = False
         except ValueError:
             self.model_type = {
                 "NeoCustom": "gpt_neo",
