@@ -9,6 +9,10 @@ Ghostpad builds upon [KoboldAI](https://github.com/KoboldAI/KoboldAI-Client) to 
 
 Ghostpad began as a lightweight personal project that I built so I could more comfortably use LLMs from my couch. It continued to grow and evolve until I decided it's worth sharing with the world.
 
+### Demo Vid
+
+https://github.com/ghostpad/ghostpad/assets/1075900/935b1d25-ac37-4d0a-9bbb-f684d22cfd50
+
 ### Release Notes - 0.1
 - This is the very first public release. If everything works perfectly, then I am the luckiest person on this entire planet. But I'm not, and there will be bugs.
 - This has been tested on Linux and Mac. I think Windows should work, but these are famous last words. Please open an issue if you have any difficulties on Windows and I'll investigate.
