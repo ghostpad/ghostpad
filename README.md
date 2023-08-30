@@ -72,7 +72,11 @@ Some of the biggest differences between Ghostpad and KoboldAI are the technical 
 
 Continuing generation mid-story
 
-https://github.com/ghostpad/ghostpad/assets/1075900/ddd37175-00dc-4941-88f2-1843afcde292
+
+
+https://github.com/ghostpad/ghostpad/assets/1075900/205692c5-aef9-4bea-99ce-1cf97e2100c1
+
+
 
 Opening the Hugging Face browser and loading a tiny model
 
