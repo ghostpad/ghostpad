@@ -82,6 +82,7 @@ Opening the Hugging Face browser and loading a tiny model
 
 
 
-https://github.com/ghostpad/ghostpad/assets/1075900/ea3802ad-02e4-494f-8d1b-400a97108ed5
+
+https://github.com/ghostpad/ghostpad/assets/1075900/dc204936-115f-4227-b3d9-b854c26c4107
 
 
