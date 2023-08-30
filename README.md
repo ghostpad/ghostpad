@@ -74,6 +74,10 @@ Continuing generation mid-story
 
 https://github.com/ghostpad/ghostpad/assets/1075900/ddd37175-00dc-4941-88f2-1843afcde292
 
-Opening the Hugging Face browser and loading a model
+Opening the Hugging Face browser and loading a tiny model
 
-https://github.com/ghostpad/ghostpad/assets/1075900/2306418e-b336-4862-85a3-e07050dc42d7
+
+
+https://github.com/ghostpad/ghostpad/assets/1075900/ea3802ad-02e4-494f-8d1b-400a97108ed5
+
+
