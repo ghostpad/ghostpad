@@ -28,7 +28,7 @@ https://github.com/ghostpad/ghostpad/assets/1075900/273034da-05f3-4652-aad0-78ef
 - [Node.js](https://nodejs.org/)
 
 ### Installation
-1. Follow the koboldai-ghostpad installation instructions for your system.
+1. Follow the [koboldai-ghostpad](https://github.com/ghostpad/koboldai-ghostpad) installation instructions for your system and run it.
 
 2. Clone Ghostpad, install dependencies, build.
 ```bash
