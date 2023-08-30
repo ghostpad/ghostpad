@@ -11,7 +11,11 @@ Ghostpad began as a lightweight personal project that I built so I could more co
 
 ### Demo Vid
 
-https://github.com/ghostpad/ghostpad/assets/1075900/935b1d25-ac37-4d0a-9bbb-f684d22cfd50
+
+
+https://github.com/ghostpad/ghostpad/assets/1075900/273034da-05f3-4652-aad0-78ef2399d310
+
+
 
 ### Release Notes - 0.1
 - This is the very first public release. If everything works perfectly, then I am the luckiest person on this entire planet. But I'm not, and there will be bugs.
