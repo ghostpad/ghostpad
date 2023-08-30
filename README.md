@@ -11,13 +11,7 @@ Ghostpad builds upon [KoboldAI](https://github.com/KoboldAI/KoboldAI-Client) to 
 
 Ghostpad began as a lightweight personal project that I built so I could more comfortably use LLMs from my couch. It continued to grow and evolve until I decided it's worth sharing with the world.
 
-### Demo Vid
-
-
-
 https://github.com/ghostpad/ghostpad/assets/1075900/273034da-05f3-4652-aad0-78ef2399d310
-
-
 
 ### Release Notes - 0.1
 - This is the very first public release. If everything works perfectly, then I am the luckiest person on this entire planet. But I'm not, and there will be bugs.
@@ -73,3 +67,13 @@ Some of the biggest differences between Ghostpad and KoboldAI are the technical 
 - Various backend optimizations: For phase 1 of this project, I self-imposed a rule to avoid complex backend changes. That rule is now cautiously lifted. Anything suitable for upstream Kobold will be opened there. There's still very much a need to avoid "hard fork" changes that will fragment community efforts.
 - Stable Diffusion integration: would be nice to have
 - Themes: The themes are currently default DaisyUI themes, and I want to build a selection of custom themes
+
+### Misc Demo Videos
+
+Continuing generation mid-story
+
+https://github.com/ghostpad/ghostpad/assets/1075900/ddd37175-00dc-4941-88f2-1843afcde292
+
+Opening the Hugging Face browser and loading a model
+
+https://github.com/ghostpad/ghostpad/assets/1075900/2306418e-b336-4862-85a3-e07050dc42d7
