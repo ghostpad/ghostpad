@@ -6,6 +6,7 @@ Ghostpad builds upon [KoboldAI](https://github.com/KoboldAI/KoboldAI-Client) to 
 - A "continue" feature, which can be used to generate text mid-story, starting at your cursor.
 - A library for your world info and text. Individual memories, author's notes, and world info entries can be saved. These can then be combined together, allowing for a "building block" style experience when designing scenarios and characters.
 - Real time edits. Instead of syncing with the server when you defocus the text editor, your changes always take effect immediately.
+- WPP to text. If you've ever designed a character using the WPP format and wanted to combine it with plain text, you can now do this with the "Insert WPP in Text" button.
 
 Ghostpad began as a lightweight personal project that I built so I could more comfortably use LLMs from my couch. It continued to grow and evolve until I decided it's worth sharing with the world.
 
