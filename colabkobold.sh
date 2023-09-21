@@ -2,7 +2,7 @@
 # KoboldAI Easy Colab Deployment Script by Henk717
 
 # read the options
-TEMP=`getopt -o m:i:p:c:d:x:a:l:z:g:t:n:b:s:r: --long model:,init:,path:,configname:,download:,aria2:,dloc:,xloc:,7z:,git:,tar:,ngrok:,branch:,savemodel:,localtunnel:,lt:,revision: -- "$@"`
+TEMP=`getopt -o m:i:p:c:d:x:a:l:z:g:t:n:b:s:r: --long model:,init:,path:,configname:,download:,aria2:,dloc:,xloc:,7z:,git:,tar:,ngrok:,branch:,savemodel:,localtunnel:,lt:,revision:,backend: -- "$@"`
 eval set -- "$TEMP"
 
 # extract options and their arguments into variables.
@@ -40,6 +40,8 @@ while true ; do
             branch="$2" ; shift 2 ;;
         -s|--savemodel)
             savemodel=" --savemodel" ; shift 2 ;;
+        --backend)
+            backend=" --model_backend $2" ; shift 2 ;;
         --) shift ; break ;;
         *) echo "Internal error!" ; exit 1 ;;
     esac
@@ -54,8 +56,8 @@ function launch
         exit 0
     else
     cd /content/KoboldAI-Client
-    echo "Launching KoboldAI with the following options : python3 aiserver.py$model$kmpath$configname$ngrok$localtunnel$savemodel$revision --colab"
-    python3 aiserver.py$model$kmpath$configname$ngrok$localtunnel$savemodel$revision --colab
+    echo "Launching KoboldAI with the following options : python3 aiserver.py$model$kmpath$configname$ngrok$localtunnel$savemodel$revision$backend --colab"
+    python3 aiserver.py$model$kmpath$configname$ngrok$localtunnel$savemodel$revision$backend --colab
     exit
     fi
 }
@@ -173,6 +175,9 @@ if [ "$init" != "skip" ]; then
     ln -s /content/drive/MyDrive/KoboldAI/models/ models
     ln -s /content/drive/MyDrive/KoboldAI/presets/ presets
     ln -s /content/drive/MyDrive/KoboldAI/themes/ themes
+
+    # Remove conflicting dependencies
+    sudo apt remove python3-blinker -y
 
     if [ -n "${COLAB_TPU_ADDR+set}" ]; then
         pip install -r requirements_mtj.txt

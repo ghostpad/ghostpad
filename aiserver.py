@@ -74,6 +74,13 @@ from utils import debounce
 import utils
 import koboldai_settings
 import torch
+try:
+    import intel_extension_for_pytorch as ipex
+    if torch.xpu.is_available():
+        from modeling.ipex import ipex_init
+        ipex_init()
+except Exception:
+    pass
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, AutoModelForTokenClassification
 import transformers
 import ipaddress
@@ -324,8 +331,11 @@ model_menu = {
         MenuFolder("Return to Main Menu", "mainmenu"),
         ],
     'chatlist': [
+        MenuModel("Pygmalion-2 13B", "PygmalionAI/pygmalion-2-13b", "12GB*"),
+        MenuModel("Mythalion 13B", "PygmalionAI/mythalion-13b", "12GB*"),
         MenuModel("Mythomax 13B (Instruct)", "Gryphe/MythoMax-L2-13b", "12GB*"),
         MenuModel("Huginn 13B (Instruct)", "The-Face-Of-Goonery/Huginn-13b-FP16", "12GB*"),
+        MenuModel("Pygmalion-2 7B", "PygmalionAI/pygmalion-2-7b", "8GB*"),
         MenuModel("Pygmalion 6B", "PygmalionAI/pygmalion-6b", "8GB*"),
         MenuModel("Pygmalion 2.7B", "PygmalionAI/pygmalion-2.7b", "6GB"),
         MenuModel("Pygmalion 1.3B", "PygmalionAI/pygmalion-1.3b", "4GB*"),
@@ -647,6 +657,7 @@ logger.add(UI_2_log_history, serialize=True, colorize=True, enqueue=True, level=
 
 #logger.add("log_file_1.log", rotation="500 MB")    # Automatically rotate too big file
 koboldai_vars = koboldai_settings.koboldai_vars(socketio)
+koboldai_settings.koboldai_vars_main = koboldai_vars
 utils.koboldai_vars = koboldai_vars
 utils.socketio = socketio
 
@@ -930,7 +941,7 @@ tags = [
 api_version = None  # This gets set automatically so don't change this value
 
 api_v1 = KoboldAPISpec(
-    version="1.2.4",
+    version="1.2.5",
     prefixes=["/api/v1", "/api/latest"],
     tags=tags,
 )
@@ -1724,11 +1735,7 @@ def load_model(model_backend, initial_load=False):
     if koboldai_vars.model != 'ReadOnly':
         emit('from_server', {'cmd': 'model_load_status', 'data': "Loading {}".format(model_backends[model_backend].model_name if "model_name" in vars(model_backends[model_backend]) else model_backends[model_backend].id)}, broadcast=True)
         #Have to add a sleep so the server will send the emit for some reason
-        time.sleep(0.1)
-
-    if 'model' in globals():
-        model.unload()
-    
+        time.sleep(0.1)    
     
     # If transformers model was selected & GPU available, ask to use CPU or GPU
     if(not koboldai_vars.use_colab_tpu and koboldai_vars.model not in ["InferKit", "Colab", "API", "CLUSTER", "OAI", "GooseAI" , "ReadOnly", "TPUMeshTransformerGPTJ", "TPUMeshTransformerGPTNeoX"]):
@@ -3269,19 +3276,19 @@ def actionsubmit(
                 try:
                     if(os.path.isdir(tokenizer_id)):
                         try:
-                            tokenizer = AutoTokenizer.from_pretrained(tokenizer_id, revision=koboldai_vars.revision, cache_dir="cache")
-                        except:
                             tokenizer = AutoTokenizer.from_pretrained(tokenizer_id, revision=koboldai_vars.revision, cache_dir="cache", use_fast=False)
+                        except:
+                            tokenizer = AutoTokenizer.from_pretrained(tokenizer_id, revision=koboldai_vars.revision, cache_dir="cache")
                     elif(os.path.isdir("models/{}".format(tokenizer_id.replace('/', '_')))):
                         try:
-                            tokenizer = AutoTokenizer.from_pretrained("models/{}".format(tokenizer_id.replace('/', '_')), revision=koboldai_vars.revision, cache_dir="cache")
-                        except:
                             tokenizer = AutoTokenizer.from_pretrained("models/{}".format(tokenizer_id.replace('/', '_')), revision=koboldai_vars.revision, cache_dir="cache", use_fast=False)
+                        except:
+                            tokenizer = AutoTokenizer.from_pretrained("models/{}".format(tokenizer_id.replace('/', '_')), revision=koboldai_vars.revision, cache_dir="cache")
                     else:
                         try:
-                            tokenizer = AutoTokenizer.from_pretrained(tokenizer_id, revision=koboldai_vars.revision, cache_dir="cache")
-                        except:
                             tokenizer = AutoTokenizer.from_pretrained(tokenizer_id, revision=koboldai_vars.revision, cache_dir="cache", use_fast=False)
+                        except:
+                            tokenizer = AutoTokenizer.from_pretrained(tokenizer_id, revision=koboldai_vars.revision, cache_dir="cache")
                 except:
                     logger.warning(f"Unknown tokenizer {repr(tokenizer_id)}")
                 koboldai_vars.api_tokenizer_id = tokenizer_id
@@ -3918,7 +3925,8 @@ def generate(txt, minimum, maximum, found_entries=None, gen_mode=GenerationMode.
         return
 
     for i in range(koboldai_vars.numseqs):
-        koboldai_vars.lua_koboldbridge.generated[i+1][koboldai_vars.generated_tkns] = int(genout[i, -1].item())
+        if len(genout[i]) > 0:
+            koboldai_vars.lua_koboldbridge.generated[i+1][koboldai_vars.generated_tkns] = int(genout[i, -1].item())
         koboldai_vars.lua_koboldbridge.outputs[i+1] = utils.decodenewlines(tokenizer.decode(genout[i, -already_generated:]))
 
     execute_outmod()
@@ -6325,6 +6333,9 @@ def UI_2_resubmit_model_info(data):
 @socketio.on('load_model')
 @logger.catch
 def UI_2_load_model(data):
+    logger.debug("Unloading previous model")
+    if 'model' in globals():
+        model.unload()
     logger.debug("Loading model with user input of: {}".format(data))
     model_backends[data['plugin']].set_input_parameters(data)
     load_model(data['plugin'])
@@ -7346,7 +7357,7 @@ def generate_image(prompt: str) -> Optional[Image.Image]:
     if koboldai_vars.img_gen_priority == 4:
         # Check if stable-diffusion-webui API option selected and use that if found.
         return text2img_api(prompt)
-    elif ((not koboldai_vars.hascuda or not os.path.exists("functional_models/stable-diffusion")) and koboldai_vars.img_gen_priority != 0) or  koboldai_vars.img_gen_priority == 3:
+    elif ((not koboldai_vars.hascuda or not os.path.exists("functional_models/stable-diffusion/model_index.json")) and koboldai_vars.img_gen_priority != 0) or koboldai_vars.img_gen_priority == 3:
         # If we don't have a GPU, use horde if we're allowed to
         return text2img_horde(prompt)
 
@@ -7372,7 +7383,10 @@ def text2img_local(prompt: str) -> Optional[Image.Image]:
     logger.debug("Generating Image")
     from diffusers import StableDiffusionPipeline
     if koboldai_vars.image_pipeline is None:
-        pipe = tpool.execute(StableDiffusionPipeline.from_pretrained, "XpucT/Deliberate", safety_checker=None, torch_dtype=torch.float16, cache="functional_models/stable-diffusion").to("cuda")
+        if not os.path.exists("functional_models/stable-diffusion/model_index.json"):
+            from huggingface_hub import snapshot_download
+            snapshot_download("XpucT/Deliberate", local_dir="functional_models/stable-diffusion", local_dir_use_symlinks=False, cache_dir="cache/", ignore_patterns=["*.safetensors"])
+        pipe = tpool.execute(StableDiffusionPipeline.from_pretrained, "functional_models/stable-diffusion", safety_checker=None, torch_dtype=torch.float16).to("cuda")
     else:
         pipe = koboldai_vars.image_pipeline.to("cuda")
     logger.debug("time to load: {}".format(time.time() - start_time))
@@ -7983,7 +7997,7 @@ def model_info():
 @require_allowed_ip
 @logger.catch
 def show_vars():
-    if args.no_ui:
+    if args.no_ui or koboldai_vars.host:
         return redirect('/api/latest')
     json_data = {}
     json_data['story_settings'] = json.loads(koboldai_vars.to_json("story_settings"))
@@ -8147,6 +8161,8 @@ def permutation_validator(lst: list):
     return True
 
 class GenerationInputSchema(SamplerSettingsSchema):
+    class Meta:
+        unknown = EXCLUDE # Doing it on this level is not a deliberate design choice on our part, it doesn't work nested... - Henk
     prompt: str = fields.String(required=True, metadata={"description": "This is the submission."})
     use_memory: bool = fields.Boolean(load_default=False, metadata={"description": "Whether or not to use the memory from the KoboldAI GUI when generating text."})
     use_story: bool = fields.Boolean(load_default=False, metadata={"description": "Whether or not to use the story from the KoboldAI GUI when generating text."})
@@ -8154,7 +8170,7 @@ class GenerationInputSchema(SamplerSettingsSchema):
     use_world_info: bool = fields.Boolean(load_default=False, metadata={"description": "Whether or not to use the world info from the KoboldAI GUI when generating text."})
     use_userscripts: bool = fields.Boolean(load_default=False, metadata={"description": "Whether or not to use the userscripts from the KoboldAI GUI when generating text."})
     soft_prompt: Optional[str] = fields.String(metadata={"description": "Soft prompt to use when generating. If set to the empty string or any other string containing no non-whitespace characters, uses no soft prompt."}, validate=[soft_prompt_validator, validate.Regexp(r"^[^/\\]*$")])
-    max_length: int = fields.Integer(validate=validate.Range(min=1, max=512), metadata={"description": "Number of tokens to generate."})
+    max_length: int = fields.Integer(validate=validate.Range(min=1), metadata={"description": "Number of tokens to generate."})
     max_context_length: int = fields.Integer(validate=validate.Range(min=1), metadata={"description": "Maximum number of tokens to send to the model."})
     n: int = fields.Integer(validate=validate.Range(min=1, max=5), metadata={"description": "Number of outputs to generate."})
     disable_output_formatting: bool = fields.Boolean(load_default=True, metadata={"description": "When enabled, all output formatting options default to `false` instead of the value in the KoboldAI GUI."})
@@ -8162,14 +8178,14 @@ class GenerationInputSchema(SamplerSettingsSchema):
     frmtrmblln: Optional[bool] = fields.Boolean(metadata={"description": "Output formatting option. When enabled, replaces all occurrences of two or more consecutive newlines in the output with one newline.\n\nIf `disable_output_formatting` is `true`, this defaults to `false` instead of the value in the KoboldAI GUI."})
     frmtrmspch: Optional[bool] = fields.Boolean(metadata={"description": "Output formatting option. When enabled, removes `#/@%{}+=~|\^<>` from the output.\n\nIf `disable_output_formatting` is `true`, this defaults to `false` instead of the value in the KoboldAI GUI."})
     singleline: Optional[bool] = fields.Boolean(metadata={"description": "Output formatting option. When enabled, removes everything after the first line of the output, including the newline.\n\nIf `disable_output_formatting` is `true`, this defaults to `false` instead of the value in the KoboldAI GUI."})
-    use_default_badwordids: bool = fields.Boolean(load_default=True, metadata={"description": "Ban tokens that commonly worsen the writing experience for continuous story writing"})
+    use_default_badwordsids: bool = fields.Boolean(load_default=True, metadata={"description": "Ban tokens that commonly worsen the writing experience for continuous story writing"})
     disable_input_formatting: bool = fields.Boolean(load_default=True, metadata={"description": "When enabled, all input formatting options default to `false` instead of the value in the KoboldAI GUI"})
     frmtadsnsp: Optional[bool] = fields.Boolean(metadata={"description": "Input formatting option. When enabled, adds a leading space to your input if there is no trailing whitespace at the end of the previous action.\n\nIf `disable_input_formatting` is `true`, this defaults to `false` instead of the value in the KoboldAI GUI."})
     quiet: Optional[bool] = fields.Boolean(metadata={"description": "When enabled, Generated output will not be displayed in the console."})
     sampler_order: Optional[List[int]] = fields.List(fields.Integer(), validate=[validate.Length(min=6), permutation_validator], metadata={"description": "Sampler order to be used. If N is the length of this array, then N must be greater than or equal to 6 and the array must be a permutation of the first N non-negative integers."})
     sampler_seed: Optional[int] = fields.Integer(validate=validate.Range(min=0, max=2**64 - 1), metadata={"description": "RNG seed to use for sampling. If not specified, the global RNG will be used."})
     sampler_full_determinism: Optional[bool] = fields.Boolean(metadata={"description": "If enabled, the generated text will always be the same as long as you use the same RNG seed, input and settings. If disabled, only the *sequence* of generated texts that you get when repeatedly generating text will be the same given the same RNG seed, input and settings."})
-    stop_sequence: Optional[List[str]] = fields.List(fields.String(),metadata={"description": "An array of string sequences where the API will stop generating further tokens. The returned text WILL contain the stop sequence."}, validate=[validate.Length(max=10)])
+    stop_sequence: Optional[List[str]] = fields.List(fields.String(),metadata={"description": "An array of string sequences where the API will stop generating further tokens. The returned text WILL contain the stop sequence."})
 
 
 class GenerationResultSchema(KoboldSchema):
@@ -8314,7 +8330,7 @@ def _generate_text(body: GenerationInputSchema):
         "sampler_order": ("koboldai_vars", "sampler_order", None),
         "sampler_full_determinism": ("koboldai_vars", "full_determinism", None),
         "stop_sequence": ("koboldai_vars", "stop_sequence", None),
-        "use_default_badwordids": ("koboldai_vars", "use_default_badwordids", None),
+        "use_default_badwordsids": ("koboldai_vars", "use_default_badwordsids", None),
     }
     saved_settings = {}
     set_aibusy(1)
@@ -8552,6 +8568,8 @@ def put_model(body: ModelSelectionSchema):
             backend = "Huggingface"
 
     try:
+        if 'model' in globals():
+            model.unload()
         load_model(backend)
     except Exception as e:
         koboldai_vars.model = old_model
