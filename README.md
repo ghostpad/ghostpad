@@ -1,7 +1,7 @@
 ## Ghostpad
 ### A free AI text generation interface based on KoboldAI
 
-**Update: Very early support for Exllamav2 has been added to the Kobold fork. It's not pretty, but it functions on a single cuda device. It's barely tested and device splitting probably will not work, but if you want to run a quantized 70b model on a 3090, this is likely your one bleeding-edge option for Kobold.**
+**Update 09/22/2023: Very early support for Exllamav2 has been added to the Kobold fork. It's not pretty, but it functions on a single cuda device. It's barely tested and device splitting probably will not work, but if you want to run a quantized 70b model on a 3090, this is likely your one bleeding-edge option for Kobold.**
 
 Ghostpad builds upon [KoboldAI](https://github.com/KoboldAI/KoboldAI-Client) to offer:
 - A new mobile-first UI with customizable fonts and themes
