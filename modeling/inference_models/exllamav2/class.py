@@ -1,42 +1,42 @@
 from __future__ import annotations
-# try:
-import time, json
-import torch
-import requests
-import numpy as np
-from typing import List, Optional, Union
-import os
-import glob
-from pathlib import Path
-import re
-import warnings
-import gc
+try:
+    import time, json
+    import torch
+    import requests
+    import numpy as np
+    from typing import List, Optional, Union
+    import os
+    import glob
+    from pathlib import Path
+    import re
+    import warnings
+    import gc
 
-import utils
-from logger import logger
+    import utils
+    from logger import logger
 
-from modeling import warpers
-from modeling.warpers import Warper
-from modeling.stoppers import Stoppers
-from modeling.post_token_hooks import PostTokenHooks
-from modeling.inference_model import (
-    GenerationResult,
-    GenerationSettings,
-    InferenceModel,
-    ModelCapabilities,
-)
+    from modeling import warpers
+    from modeling.warpers import Warper
+    from modeling.stoppers import Stoppers
+    from modeling.post_token_hooks import PostTokenHooks
+    from modeling.inference_model import (
+        GenerationResult,
+        GenerationSettings,
+        InferenceModel,
+        ModelCapabilities,
+    )
 
-from modeling.tokenizer import GenericTokenizer
+    from modeling.tokenizer import GenericTokenizer
 
 
-from exllamav2.model import ExLlamaV2, ExLlamaV2Cache, ExLlamaV2Config
-from transformers import LlamaTokenizer
-from exllamav2.generator import ExLlamaV2StreamingGenerator
-load_failed = False
-# except:
-#     load_failed = True
+    from exllamav2.model import ExLlamaV2, ExLlamaV2Cache, ExLlamaV2Config
+    from transformers import LlamaTokenizer
+    from exllamav2.generator import ExLlamaV2StreamingGenerator
+    load_failed = False
+except:
+    load_failed = True
 
-model_backend_type = "Huggingface"
+model_backend_type = "Exl2"
 model_backend_name = "ExLlama V2 (WIP)"
 
 # When set to true, messages will appear in the console if samplers are not
@@ -371,7 +371,7 @@ class model_backend(InferenceModel):
                                             "step": 1,
                                             "check": {"sum": ["{}_Layers".format(i) for i in range(gpu_count)], "value": layer_count, 'check': "="},
                                             "check_message": "The sum of assigned layers must equal {}".format(layer_count),
-                                            "default": [layer_count if i == 0 else 0],
+                                            "default": layer_count if i == 0 else 0,
                                             "tooltip": "The number of layers to put on {}.".format(torch.cuda.get_device_name(i)),
                                             "menu_path": "Layers",
                                             "extra_classes": "",

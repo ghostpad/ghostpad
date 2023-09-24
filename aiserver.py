@@ -647,9 +647,6 @@ app.secret_key = secrets.token_hex()
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
-# Hacky support for exllamav2 cloned into kobold dir
-sys.path.append('./exllamav2')
-
 # Hack for socket stuff that needs app context
 utils.flask_app = app
 

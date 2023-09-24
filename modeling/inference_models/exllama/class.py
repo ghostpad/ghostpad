@@ -394,7 +394,7 @@ class model_backend(InferenceModel):
                                             "step": 1,
                                             "check": {"sum": ["{}_Layers".format(i) for i in range(gpu_count)], "value": layer_count, 'check': "="},
                                             "check_message": "The sum of assigned layers must equal {}".format(layer_count),
-                                            "default": [layer_count if i == 0 else 0],
+                                            "default": layer_count if i == 0 else 0,
                                             "tooltip": "The number of layers to put on {}.".format(torch.cuda.get_device_name(i)),
                                             "menu_path": "Layers",
                                             "extra_classes": "",
