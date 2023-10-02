@@ -6,8 +6,8 @@ import { SocketApiContext } from "@/socketApi/SocketApiProvider";
 
 export const ConfirmResetEditorModal = () => {
   const socketApi = useContext(SocketApiContext);
-  const { modalState } = useSelector((state: RootState) => {
-    return state.ui;
+  const modalState = useSelector((state: RootState) => {
+    return state.ui.modalState;
   });
   const dispatch = useDispatch();
 

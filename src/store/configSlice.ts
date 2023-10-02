@@ -40,6 +40,8 @@ export type GhostpadConfig = {
   editorLocalFont: string;
   editorFontSize: number;
   useGoogleFont: boolean;
+  speechSynthesisLanguage: string | null;
+  speechSynthesisVoice: string | null;
 };
 
 export type ConfigState = {
@@ -47,7 +49,6 @@ export type ConfigState = {
   koboldConfig: Partial<KoboldConfig>;
   timestamps: KoboldConfigTimestamps;
   lastNodeCount: number;
-  lastGeneratedTokenCount: number | null;
   ownActions: OwnAction[];
   loadState: {
     prompt: boolean;
@@ -57,6 +58,12 @@ export type ConfigState = {
   pendingInsertion: boolean;
   reinsertQueue: ReinsertQueue;
   reinsertHistory: ReinsertHistoryItem;
+  audioInEnabled: boolean;
+  audioOutEnabled: boolean;
+  utteranceStart: number | null;
+  utteranceInProgress: boolean;
+  speechSynthesisLanguage: string | null;
+  speechSynthesisVoice: string | null;
 };
 
 export type OwnAction = {
@@ -75,13 +82,18 @@ const initialState: ConfigState = {
   ghostpadConfig: defaultGhostpadConfig,
   koboldConfig: {},
   timestamps: {},
-  lastGeneratedTokenCount: null,
   lastNodeCount: 0,
   ownActions: [],
   pendingInsertion: false,
   pendingRetry: false,
   reinsertQueue: [],
   reinsertHistory: null,
+  audioInEnabled: false,
+  audioOutEnabled: false,
+  utteranceStart: null,
+  utteranceInProgress: false,
+  speechSynthesisLanguage: null,
+  speechSynthesisVoice: null,
   // When a story is loaded, the prompt and actions are initiated separately
   // This was added to prevent bugs involving change events firing before the story is fully loaded
   loadState: {
@@ -102,6 +114,52 @@ export const configSlice = createSlice({
       ghostpadConfig: action.payload,
     }),
 
+    setAudioInEnabled: (
+      state: ConfigState,
+      action: PayloadAction<boolean>
+    ) => ({
+      ...state,
+      audioInEnabled: action.payload,
+    }),
+
+    setAudioOutEnabled: (
+      state: ConfigState,
+      action: PayloadAction<boolean>
+    ) => ({
+      ...state,
+      audioOutEnabled: action.payload,
+    }),
+
+    setUtteranceStart: (
+      state: ConfigState,
+      action: PayloadAction<number | null>
+    ) => ({
+      ...state,
+      utteranceStart: action.payload,
+    }),
+
+    setSpeechSynthesisLanguage: (
+      state: ConfigState,
+      action: PayloadAction<string | null>
+    ) => ({
+      ...state,
+      ghostpadConfig: {
+        ...state.ghostpadConfig,
+        speechSynthesisLanguage: action.payload,
+      },
+    }),
+
+    setSpeechSynthesisVoice: (
+      state: ConfigState,
+      action: PayloadAction<string | null>
+    ) => ({
+      ...state,
+      ghostpadConfig: {
+        ...state.ghostpadConfig,
+        speechSynthesisVoice: action.payload,
+      },
+    }),
+
     resetStory: (state) => ({
       ...state,
       timestamps: {},
@@ -110,13 +168,22 @@ export const configSlice = createSlice({
         actions: false,
       },
       lastNodeCount: 0,
-      lastGeneratedTokenCount: null,
       ownActions: [],
     }),
+
     setNodeCount: (state, action: PayloadAction<number>) => ({
       ...state,
       lastNodeCount: action.payload,
     }),
+
+    setUtteranceInProgress: (
+      state: ConfigState,
+      action: PayloadAction<boolean>
+    ) => ({
+      ...state,
+      utteranceInProgress: action.payload,
+    }),
+
     updateEditorGoogleFont: (
       state: ConfigState,
       action: PayloadAction<{ linkFamily: string; cssFamily: string }>
@@ -127,6 +194,7 @@ export const configSlice = createSlice({
         editorGoogleFont: action.payload,
       },
     }),
+
     updateEditorFont: (state: ConfigState, action: PayloadAction<string>) => ({
       ...state,
       ghostpadConfig: {
@@ -134,6 +202,7 @@ export const configSlice = createSlice({
         editorFont: action.payload,
       },
     }),
+
     updateEditorFontSize: (
       state: ConfigState,
       action: PayloadAction<number>
@@ -144,6 +213,7 @@ export const configSlice = createSlice({
         editorFontSize: action.payload,
       },
     }),
+
     updateUseGoogleFont: (
       state: ConfigState,
       action: PayloadAction<boolean>
@@ -154,6 +224,7 @@ export const configSlice = createSlice({
         useGoogleFont: action.payload,
       },
     }),
+
     updateReinsertHistory: (
       state,
       action: PayloadAction<ReinsertHistoryItem>
@@ -161,18 +232,22 @@ export const configSlice = createSlice({
       ...state,
       reinsertHistory: action.payload,
     }),
+
     updatePendingInsertion: (state, action: PayloadAction<boolean>) => ({
       ...state,
       pendingInsertion: action.payload,
     }),
+
     updatePendingRetry: (state, action: PayloadAction<boolean>) => ({
       ...state,
       pendingRetry: action.payload,
     }),
+
     updateReinsertQueue: (state, action: PayloadAction<ReinsertQueue>) => ({
       ...state,
       reinsertQueue: action.payload,
     }),
+
     updateKoboldConfigTimestamp: (
       state: ConfigState,
       action: PayloadAction<{ id: number; timestamp: number }>
@@ -189,6 +264,7 @@ export const configSlice = createSlice({
         },
       },
     }),
+
     updateOwnActions: (
       state: ConfigState,
       action: PayloadAction<OwnAction[]>
@@ -199,30 +275,20 @@ export const configSlice = createSlice({
         (ownAction) => Date.now() - ownAction.timestamp < 5000
       ),
     }),
+
     updateKoboldVar: (
       state: ConfigState,
       action: PayloadAction<MsgVarChanged>
     ) => {
-      const {
-        koboldConfig,
-        timestamps,
-        lastNodeCount,
-        loadState,
-        ownActions,
-        lastGeneratedTokenCount,
-      } = state;
+      const { koboldConfig, timestamps, lastNodeCount, loadState, ownActions } =
+        state;
       const updatedOwnActions = [...ownActions];
-      let updatedLastGeneratedTokenCount = lastGeneratedTokenCount;
       const isActionUpdate =
         action.payload.classname === "story" &&
         action.payload.name === "actions";
       const isPromptUpdate =
         action.payload.classname === "story" &&
         action.payload.name === "prompt_wi_highlighted_text";
-      const isStoryModeUpdate =
-        action.payload.classname === "story" &&
-        action.payload.name === "storymode";
-
       const isAiBusyChange =
         action.payload.classname === "system" &&
         action.payload.name === "aibusy";
@@ -259,7 +325,6 @@ export const configSlice = createSlice({
                 aibusy: true,
               },
             },
-            lastGeneratedTokenCount: null,
             ownActions: [],
           };
         }
@@ -267,8 +332,6 @@ export const configSlice = createSlice({
 
       if (isActionUpdate || isPromptUpdate) {
         if (isPromptUpdate && action.payload.old_value !== null) return state;
-        updatedLastGeneratedTokenCount =
-          koboldConfig?.model?.generated_tkns || null;
       }
 
       const update: Partial<KoboldConfig> = {
@@ -291,7 +354,18 @@ export const configSlice = createSlice({
         const value = action.payload.value as Action;
         if (!Array.isArray(value) && typeof value.id === "number") {
           update.story.actions = [...(koboldConfig.story?.actions || [])];
-          update.story.actions[value.id] = value;
+          const existingActionIdx = update.story.actions.findIndex(
+            (action) => action.id === value.id
+          );
+          const existingAction = update.story.actions[existingActionIdx] || {};
+          if (existingAction.id >= 0) {
+            update.story.actions[existingActionIdx] = {
+              ...existingAction,
+              action: value.action,
+            };
+          } else {
+            update.story.actions.push(value);
+          }
 
           timestampUpdate.story ||= {};
           timestampUpdate.story.actions = {
@@ -312,7 +386,6 @@ export const configSlice = createSlice({
         ...state,
         koboldConfig: updatedKoboldConfig,
         timestamps: updatedTimestamps,
-        lastGeneratedTokenCount: updatedLastGeneratedTokenCount ?? 0,
         loadState: {
           prompt: isPromptUpdate ? true : loadState.prompt,
           actions: isActionUpdate ? true : loadState.actions,
@@ -339,5 +412,11 @@ export const {
   updateEditorGoogleFont,
   updateUseGoogleFont,
   resetStory,
+  setAudioInEnabled,
+  setAudioOutEnabled,
+  setUtteranceStart,
+  setUtteranceInProgress,
+  setSpeechSynthesisLanguage,
+  setSpeechSynthesisVoice,
 } = configSlice.actions;
 export default configSlice.reducer;

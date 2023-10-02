@@ -4,8 +4,8 @@ import { closeModal } from "@/store/uiSlice";
 import { saveLibraryItem } from "@/ghostpadApi/saveLibraryItem";
 
 export const ConfirmOverwriteLibraryFileModal = () => {
-  const { modalState } = useSelector((state: RootState) => {
-    return state.ui;
+  const modalState = useSelector((state: RootState) => {
+    return state.ui.modalState;
   });
   const dispatch = useDispatch();
   if (!modalState.confirmOverwriteLibraryFile.data) return null;

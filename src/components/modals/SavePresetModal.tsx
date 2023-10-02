@@ -5,8 +5,8 @@ import { closeModal } from "@/store/uiSlice";
 import { SocketApiContext } from "@/socketApi/SocketApiProvider";
 
 export const SavePresetModal = () => {
-  const { modalState } = useSelector((state: RootState) => {
-    return state.ui;
+  const modalState = useSelector((state: RootState) => {
+    return state.ui.modalState;
   });
   const socketApi = useContext(SocketApiContext);
   const dispatch = useDispatch();

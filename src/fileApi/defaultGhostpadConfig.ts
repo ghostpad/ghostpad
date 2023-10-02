@@ -8,7 +8,8 @@ export const defaultGhostpadConfig = {
     linkFamily: "Rasa",
     cssFamily: "Rasa",
   },
-
+  speechSynthesisVoice: null,
+  speechSynthesisLanguage: "en-US",
 };
 
 export default defaultGhostpadConfig;

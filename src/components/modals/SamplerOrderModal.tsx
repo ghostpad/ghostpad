@@ -7,11 +7,11 @@ import { closeModal } from "@/store/uiSlice";
 import { SocketApiContext } from "@/socketApi/SocketApiProvider";
 
 export const SamplerOrderModal = () => {
-  const { modalState } = useSelector((state: RootState) => {
-    return state.ui;
+  const modalState = useSelector((state: RootState) => {
+    return state.ui.modalState;
   });
-  const { koboldConfig } = useSelector((state: RootState) => {
-    return state.config;
+  const koboldConfig = useSelector((state: RootState) => {
+    return state.config.koboldConfig;
   });
   const socketApi = useContext(SocketApiContext);
   const dispatch = useDispatch();

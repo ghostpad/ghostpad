@@ -10,23 +10,19 @@ export type SelectOptionModalData = {
 };
 
 export const SelectOptionModal = () => {
-  const { modalState } = useSelector((state: RootState) => {
-    return state.ui;
+  const modalState = useSelector((state: RootState) => {
+    return state.ui.modalState;
   });
   const socketApi = useContext(SocketApiContext);
   const dispatch = useDispatch();
   const data = modalState.selectOption.data as SelectOptionModalData;
-  const options = useSelector((state: RootState) => {
-    if (
-      !state.config.koboldConfig.story?.actions.length ||
-      typeof data?.actionId !== "number"
-    )
-      return [];
-    return (
-      state.config.koboldConfig.story.actions[data.actionId]?.action.Options ||
-      []
-    );
+  const actions = useSelector((state: RootState) => {
+    return state.config.koboldConfig.story?.actions;
   });
+  const options =
+    !actions?.length || typeof data?.actionId !== "number"
+      ? []
+      : actions[data.actionId]?.action.Options || [];
   const aiBusy = useSelector((state: RootState) => {
     return state.config.koboldConfig.system?.aibusy;
   });

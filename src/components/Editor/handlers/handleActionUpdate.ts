@@ -21,10 +21,12 @@ export const handleActionUpdate = (
   actionArray.forEach((koboldAction: Action) => {
     // In KoboldAI, when you modify an action, you receive it back without any sort of ID identifying the source.
     // This works fine when you only update on blur like they do, but in our case, it's chaos while you're quickly typing.
-    // The forked backend will probably address this at some point, but for now, 
+    // The forked backend will probably address this at some point, but for now,
     // we need to macgyver a way to ignore the action we just sent.
 
-    const { ownActions }: ConfigState = store.getState().config;
+    const {
+      ownActions,
+    }: ConfigState = store.getState().config;
     const actionId = Number(koboldAction.id);
     const ownActionIndex = ownActions.findIndex(
       (ownAction) =>

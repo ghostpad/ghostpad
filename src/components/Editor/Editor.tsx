@@ -18,6 +18,7 @@ import { TempReinsertNode } from "./TempReinsertNode";
 import { StoryNode } from "./StoryNode";
 import { SocketApiContext } from "@/socketApi/SocketApiProvider";
 import { TempStreamNode } from "./TempStreamNode";
+import SpeechToTextPlugin from "./SpeechToTextPlugin";
 
 const theme: EditorThemeClasses = {
   root: "min-h-full p-4 editor-root",
@@ -83,6 +84,7 @@ function Editor() {
         <ClearEditorPlugin />
         <HistoryPlugin />
         <KoboldPlugin />
+        <SpeechToTextPlugin />
       </LexicalComposer>
     </div>
   );

@@ -7,8 +7,8 @@ import { sanitizeFilename } from "@/util/sanitizeFilename";
 import { saveLibraryItem } from "@/ghostpadApi/saveLibraryItem";
 
 export const SaveToLibraryModal = () => {
-  const { modalState } = useSelector((state: RootState) => {
-    return state.ui;
+  const modalState = useSelector((state: RootState) => {
+    return state.ui.modalState;
   });
   const dispatch = useDispatch();
   const data = modalState.saveToLibrary.data as

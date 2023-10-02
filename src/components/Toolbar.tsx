@@ -1,10 +1,12 @@
 import {
+  setAudioInEnabled,
+  setAudioOutEnabled,
   updatePendingInsertion,
   updatePendingRetry,
 } from "@/store/configSlice";
 import { RootState } from "@/store/store";
 import { openModal, openSidebar } from "@/store/uiSlice";
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import {
   BiEraser,
   BiLeftArrowAlt,
@@ -12,17 +14,27 @@ import {
   BiRefresh,
   BiRightArrowAlt,
 } from "react-icons/bi";
-import { BsBoxArrowInRight, BsThreeDots } from "react-icons/bs";
+import {
+  BsBoxArrowInRight,
+  BsFillMicFill,
+  BsSpeakerFill,
+  BsThreeDots,
+} from "react-icons/bs";
 import { shallowEqual, useDispatch, useSelector } from "react-redux";
 import { SocketApiContext } from "@/socketApi/SocketApiProvider";
 
 export const Toolbar = () => {
   const dispatch = useDispatch();
-  const { koboldConfig } = useSelector((state: RootState) => {
-    return {
-      koboldConfig: state.config.koboldConfig,
-    };
-  }, shallowEqual);
+  const { koboldConfig, audioInEnabled, audioOutEnabled } = useSelector(
+    (state: RootState) => {
+      return {
+        koboldConfig: state.config.koboldConfig,
+        audioInEnabled: state.config.audioInEnabled,
+        audioOutEnabled: state.config.audioOutEnabled,
+      };
+    },
+    shallowEqual
+  );
   const socketApi = useContext(SocketApiContext);
   const handleRedo = () => {
     const currentAction = koboldConfig.actions?.["Action Count"];
@@ -116,6 +128,28 @@ export const Toolbar = () => {
               >
                 <BsBoxArrowInRight size="1.5em" />
                 <span>Continue</span>
+              </button>
+            </li>
+            <li>
+              <button
+                title="Toggle microphone speech recognition"
+                onClick={() => {
+                  dispatch(setAudioInEnabled(!audioInEnabled));
+                }}
+                className="flex flex-row justify-start"
+              >
+                <BsFillMicFill size="1.5em" />
+                <span>{audioInEnabled ? "Disable" : "Enable"} Audio In</span>
+              </button>
+              <button
+                title="Toggle audio-only communication"
+                onClick={() => {
+                  dispatch(setAudioOutEnabled(!audioOutEnabled));
+                }}
+                className="flex flex-row justify-start"
+              >
+                <BsSpeakerFill size="1.5em" />
+                <span>{audioOutEnabled ? "Disable" : "Enable"} Audio Out</span>
               </button>
             </li>
           </ul>

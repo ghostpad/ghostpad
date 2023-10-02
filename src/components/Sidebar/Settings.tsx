@@ -1,11 +1,12 @@
-import { saveGhostpadConfig  } from "@/ghostpadApi/saveGhostpadConfig";
+import { saveGhostpadConfig } from "@/ghostpadApi/saveGhostpadConfig";
 import { GhostpadConfig, updateGhostpadConfig } from "@/store/configSlice";
 import { SocketState, updateSocketState } from "@/store/connectionSlice";
 import { RootState } from "@/store/store";
 import { debounce } from "@/util/debounce";
 import { Dispatch } from "@reduxjs/toolkit";
-import { ChangeEvent, Fragment } from "react";
+import { ChangeEvent, Fragment, useContext, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { SpeechSynthesisContext } from "../SpeechSynthesisProvider";
 
 // DaisyUI themes.
 // See https://daisyui.com/docs/themes/#-4 for info on adding your own.
@@ -214,6 +215,7 @@ const syncConfig = debounce(
 );
 
 const Settings = () => {
+  const { speechSynthesisSupported, voicesByLanguage } = useContext(SpeechSynthesisContext);
   const ghostpadConfig = useSelector((state: RootState) => {
     return state.config.ghostpadConfig;
   });
@@ -365,6 +367,54 @@ const Settings = () => {
           </span>
         </p>
       </div>
+
+      {speechSynthesisSupported && (
+        <>
+          <label className="label pt-0 pl-0">
+            <span className="label-text">Speech Synthesis Language</span>
+          </label>
+          <select
+            className="select select-bordered bg-base-200 w-full max-w-xs"
+            value={ghostpadConfig.speechSynthesisLanguage || ""}
+            onChange={(evt) =>
+              updateConfig({ speechSynthesisLanguage: evt.target.value })
+            }
+          >
+            <option value="">None</option>
+            {Object.entries(voicesByLanguage)
+              .sort()
+              .map(([lang]) => (
+                <option key={lang} value={lang}>
+                  {lang}
+                </option>
+              ))}
+          </select>
+
+          {ghostpadConfig.speechSynthesisLanguage && (
+            <>
+              <label className="label pt-0 pl-0">
+                <span className="label-text">Speech Synthesis Voice</span>
+              </label>
+              <select
+                className="select select-bordered bg-base-200 w-full max-w-xs"
+                value={ghostpadConfig.speechSynthesisVoice || ""}
+                onChange={(evt) =>
+                  updateConfig({ speechSynthesisVoice: evt.target.value })
+                }
+              >
+                <option value="">None</option>
+                {voicesByLanguage[ghostpadConfig.speechSynthesisLanguage]?.map(
+                  (voice) => (
+                    <option key={voice.voiceURI} value={voice.voiceURI}>
+                      {!voice.localService && "[Non-Local] "}{voice.name}
+                    </option>
+                  )
+                )}
+              </select>
+            </>
+          )}
+        </>
+      )}
     </div>
   );
 };

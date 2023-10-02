@@ -6,8 +6,8 @@ import { SocketApiContext } from "@/socketApi/SocketApiProvider";
 
 export const ConfirmDeleteStoryModal = () => {
   const socketApi = useContext(SocketApiContext);
-  const { modalState } = useSelector((state: RootState) => {
-    return state.ui;
+  const modalState = useSelector((state: RootState) => {
+    return state.ui.modalState;
   });
   const dispatch = useDispatch();
   const storyToDelete = modalState.confirmDeleteStory?.data as SavedStory;
@@ -19,9 +19,7 @@ export const ConfirmDeleteStoryModal = () => {
         id="confirm-delete-story-modal"
         className="modal-toggle"
       />
-      <div
-        className={"modal modal-open"}
-      >
+      <div className={"modal modal-open"}>
         <div className="modal-box">
           <h3 className="font-bold text-lg">Delete Story?</h3>
           <p className="py-4">

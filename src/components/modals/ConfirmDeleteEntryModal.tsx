@@ -7,8 +7,8 @@ import { WorldInfoEntry } from "@/types/WorldInfo";
 
 export const ConfirmDeleteEntryModal = () => {
   const socketApi = useContext(SocketApiContext);
-  const { modalState } = useSelector((state: RootState) => {
-    return state.ui;
+  const modalState = useSelector((state: RootState) => {
+    return state.ui.modalState;
   });
   const dispatch = useDispatch();
   const entryToDelete = modalState.confirmDeleteEntry?.data as WorldInfoEntry;

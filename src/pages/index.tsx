@@ -22,6 +22,120 @@ const Editor = dynamic(() => import("../components/Editor/Editor"), {
   ssr: false,
 });
 
+const GenerateButton = ({
+  textAreaRef,
+}: {
+  textAreaRef: React.RefObject<HTMLTextAreaElement>;
+}) => {
+  const systemConfig = useSelector(
+    (state: RootState) => state.config.koboldConfig.system
+  );
+  const storyConfig = useSelector(
+    (state: RootState) => state.config.koboldConfig.story
+  );
+  const socketApi = useContext(SocketApiContext);
+  return (
+    <button
+      className={cx(
+        "btn w-16 mx-4",
+        systemConfig?.aibusy && "hover:bg-error-content"
+      )}
+      onClick={() => {
+        if (systemConfig?.aibusy) {
+          socketApi?.abort();
+        } else {
+          const textArea = textAreaRef?.current;
+          if (textArea) {
+            const isInitialPrompt =
+              storyConfig?.prompt_wi_highlighted_text.length == 0;
+            const contentfulActions = storyConfig?.actions.filter((action) => {
+              return action?.action["Selected Text"].length > 0;
+            });
+            const lastContentfulAction =
+              contentfulActions?.[contentfulActions.length - 1];
+            const lastText = lastContentfulAction
+              ? lastContentfulAction?.action["Selected Text"]
+              : storyConfig?.prompt_wi_highlighted_text[0]?.text;
+            const lastChar = lastText?.slice(-1)?.[0] || "";
+            const lastCharIsNewline = lastChar == "\n";
+
+            // In story mode, don't let submissions continue on the same line
+            if (
+              storyConfig?.storymode !== 0 ||
+              !textArea.value.length ||
+              isInitialPrompt ||
+              lastCharIsNewline
+            ) {
+              socketApi?.submit(textArea.value);
+            } else {
+              if (lastText?.endsWith("\n\n")) {
+                socketApi?.submit(textArea.value.slice(0, -1));
+              }
+
+              socketApi?.submit(`\n${textArea.value}`);
+            }
+
+            textArea.value = "";
+          }
+        }
+      }}
+    >
+      {!systemConfig?.aibusy ? (
+        <BiPlay size="1.5em" />
+      ) : (
+        <BiPause size="1.5em" />
+      )}
+    </button>
+  );
+};
+
+const PageHead = () => {
+  const systemConfig = useSelector(
+    (state: RootState) => state.config.koboldConfig.system
+  );
+  const ghostpadConfig = useSelector(
+    (state: RootState) => state.config.ghostpadConfig
+  );
+
+  return (
+    <Head>
+      <title>InferLab - ${`${systemConfig?.status_message}`}</title>;
+      <meta name="description" content="AI text generation tool" />
+      <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no, shrink-to-fit=no"
+      />
+      <meta name="HandheldFriendly" content="true" />
+      <link rel="icon" href="/favicon.ico" />
+      <style>
+        {`
+            :root {
+              --editor-font: '${
+                ghostpadConfig.useGoogleFont
+                  ? ghostpadConfig.editorGoogleFont.cssFamily
+                  : ghostpadConfig.editorLocalFont
+              }';
+              --editor-font-size: ${ghostpadConfig.editorFontSize}px;
+            }
+          `}
+      </style>
+    </Head>
+  );
+};
+
+const SidebarToggle = () => {
+  const uiState = useSelector((state: RootState) => state.ui);
+  return (
+    <input
+      id="sidebar-drawer"
+      type="checkbox"
+      checked={uiState.sidebarState.active}
+      className="drawer-toggle"
+      readOnly
+    />
+  );
+};
+
 export default function InferStudio({
   initialGhostpadConfig,
 }: {
@@ -29,19 +143,9 @@ export default function InferStudio({
 }) {
   const dispatch = useDispatch();
   const { socket } = useContext(SocketContext);
-  const socketApi = useContext(SocketApiContext);
-  const {
-    koboldConfig,
-    ui: uiState,
-    ghostpadConfig,
-  } = useSelector((state: RootState) => {
-    return {
-      koboldConfig: state.config.koboldConfig,
-      ui: state.ui,
-      ghostpadConfig: state.config.ghostpadConfig,
-    };
-  }, shallowEqual);
-
+  const ghostpadConfig = useSelector(
+    (state: RootState) => state.config.ghostpadConfig
+  );
   const textAreaRef = React.useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -54,28 +158,7 @@ export default function InferStudio({
 
   return (
     <>
-      <Head>
-        <title>InferLab - ${`${koboldConfig.system?.status_message}`}</title>
-        <meta name="description" content="AI text generation tool" />
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no, shrink-to-fit=no"
-        />
-        <meta name="HandheldFriendly" content="true" />
-        <link rel="icon" href="/favicon.ico" />
-        <style>
-          {`
-            :root {
-              --editor-font: '${
-                ghostpadConfig.useGoogleFont
-                  ? ghostpadConfig.editorGoogleFont.cssFamily
-                  : ghostpadConfig.editorLocalFont
-              }';
-              --editor-font-size: ${ghostpadConfig.editorFontSize}px;
-            }
-          `}
-        </style>
-      </Head>
+      <PageHead />
       <main
         data-theme={
           ghostpadConfig?.theme || initialGhostpadConfig?.theme || "garden"
@@ -96,13 +179,7 @@ export default function InferStudio({
           </>
         )}
         <div className="drawer">
-          <input
-            id="sidebar-drawer"
-            type="checkbox"
-            checked={uiState.sidebarState.active}
-            className="drawer-toggle"
-            readOnly
-          />
+          <SidebarToggle />
           <div className="drawer-content h-screen-dvh flex flex-col">
             <Toolbar />
             <Editor />
@@ -113,60 +190,7 @@ export default function InferStudio({
                 id="user-input"
                 className="resize-none textarea textarea-bordered h-24 bg-base-200 w-full max-w-lg p-3 text-sm mx-4 my-2"
               ></textarea>
-              <button
-                className={cx(
-                  "btn w-16 mx-4",
-                  koboldConfig.system?.aibusy && "hover:bg-error-content"
-                )}
-                onClick={() => {
-                  if (koboldConfig.system?.aibusy) {
-                    socketApi?.abort();
-                  } else {
-                    const textArea = textAreaRef?.current;
-                    if (textArea) {
-                      const isInitialPrompt =
-                        koboldConfig.story?.prompt_wi_highlighted_text.length ==
-                        0;
-                      const contentfulActions =
-                        koboldConfig.story?.actions.filter((action) => {
-                          return action?.action["Selected Text"].length > 0;
-                        });
-                      const lastContentfulAction = contentfulActions?.[contentfulActions.length - 1];
-                      const lastText = lastContentfulAction
-                        ? lastContentfulAction
-                            ?.action["Selected Text"]
-                        : koboldConfig.story?.prompt_wi_highlighted_text[0]
-                            ?.text;
-                      const lastChar = lastText?.slice(-1)?.[0] || "";
-                      const lastCharIsNewline = lastChar == "\n";
-
-                      // In story mode, don't let submissions continue on the same line
-                      if (
-                        koboldConfig.story?.storymode !==  0 ||
-                        !textArea.value.length ||
-                        isInitialPrompt ||
-                        lastCharIsNewline
-                      ) {
-                        socketApi?.submit(textArea.value);
-                      } else {
-                        if (lastText?.endsWith("\n\n")) {
-                          socketApi?.submit(textArea.value.slice(0, -1));
-                        }
-
-                        socketApi?.submit(`\n${textArea.value}`);
-                      }
-
-                      textArea.value = "";
-                    }
-                  }
-                }}
-              >
-                {!koboldConfig.system?.aibusy ? (
-                  <BiPlay size="1.5em" />
-                ) : (
-                  <BiPause size="1.5em" />
-                )}
-              </button>
+              <GenerateButton textAreaRef={textAreaRef} />
             </div>
           </div>
           <Sidebar />

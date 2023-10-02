@@ -16,9 +16,9 @@ export const VarInput = ({
   title?: string;
   type?: string;
 }) => {
-  const { timestamps } = useSelector((state: RootState) => state.config);
+  const timestamps = useSelector((state: RootState) => state.config.timestamps);
   const socketApi = useContext(SocketApiContext);
-  const { koboldConfig } = useSelector((state: RootState) => state.config);
+  const koboldConfig = useSelector((state: RootState) => state.config.koboldConfig);
   const [varCategory, ...varKeyParts] = varName.split("_");
   const varKey = varKeyParts.join("_");
   const value =

@@ -4,7 +4,7 @@ import { fetchLibraryItems } from "@/util/fetchLibraryItems";
 import cx from "classix";
 import { useEffect, useState, Dispatch, SetStateAction, useRef } from "react";
 import { BiCheck, BiPencil, BiTrash, BiX } from "react-icons/bi";
-import { useDispatch, useSelector } from "react-redux";
+import { shallowEqual, useDispatch, useSelector } from "react-redux";
 import { sanitizeFilename } from "@/util/sanitizeFilename";
 import { renameLibraryItem } from "@/ghostpadApi/renameLibraryItem";
 import { loadLibraryItem } from "@/ghostpadApi/loadLibraryItem";
@@ -70,8 +70,11 @@ const LibraryNameEditor = ({
 
 export const LoadFromLibraryModal = () => {
   const { modalState, libraryItems } = useSelector((state: RootState) => {
-    return state.ui;
-  });
+    return {
+      modalState: state.ui.modalState,
+      libraryItems: state.ui.libraryItems,
+    };
+  }, shallowEqual);
   const dispatch = useDispatch();
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<LibraryItem | null>(null);
@@ -188,7 +191,10 @@ export const LoadFromLibraryModal = () => {
                   selectedItem.filename &&
                   target
                 ) {
-                  const res = await loadLibraryItem(fileType, selectedItem.filename);
+                  const res = await loadLibraryItem(
+                    fileType,
+                    selectedItem.filename
+                  );
 
                   if (res.status !== 200) {
                     console.error("Failed to load from library");

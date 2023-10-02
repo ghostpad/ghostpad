@@ -1,7 +1,7 @@
 import { closeSidebar, updateSelectedSection } from "@/store/uiSlice";
 import { AiFillHome, AiFillSetting } from "react-icons/ai";
 import { BiNotepad, BiSliderAlt } from "react-icons/bi";
-import { useDispatch, useSelector } from "react-redux";
+import { shallowEqual, useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import Home from "./Home";
 import ModelSettings from "./ModelSettings";
@@ -23,10 +23,31 @@ const screenComponents: Partial<Record<SidebarSection, () => JSX.Element>> = {
   [SidebarSection.Memory]: Memory,
 };
 
+const ConnectionStatusIndicator = () => {
+  const [koboldConfig, socketState] = useSelector((state: RootState) => {
+    return [state.config.koboldConfig, state.connection.socketState];
+  }, shallowEqual) as [KoboldConfig, SocketState];
+  return (
+    <div className="text-center py-3">
+      <span
+        className={cx(
+          "inline-block rounded w-2 h-2 mx-2",
+          socketState === SocketState.CONNECTED && "bg-success",
+          socketState === SocketState.DISCONNECTED && "bg-error",
+          socketState === SocketState.READY_TO_CONNECT && "bg-warning"
+        )}
+      />
+      {socketState === SocketState.CONNECTED
+        ? koboldConfig.model?.model
+        : "[Not Connected]"}
+    </div>
+  );
+};
+
 const Sidebar = () => {
-  const [koboldConfig, selectedSection, socketState] = useSelector((state: RootState) => {
-    return [state.config.koboldConfig, state.ui.sidebarState.selectedSection, state.connection.socketState];
-  }) as [KoboldConfig, SidebarSection, SocketState];
+  const selectedSection = useSelector((state: RootState) => {
+    return state.ui.sidebarState.selectedSection;
+  });
   const SectionComponent = Object.keys(screenComponents).includes(
     selectedSection
   )
@@ -44,12 +65,7 @@ const Sidebar = () => {
         }}
       ></label>
       <div className="w-[88%] min-h-full h-full bg-base-100 text-base-content flex flex-col max-w-md">
-        <div className="text-center py-3">
-          <span className={cx("inline-block rounded w-2 h-2 mx-2",
-            socketState === SocketState.CONNECTED && "bg-success",
-            socketState === SocketState.DISCONNECTED && "bg-error",
-            socketState === SocketState.READY_TO_CONNECT && "bg-warning")} />
-          {socketState === SocketState.CONNECTED ? koboldConfig.model?.model : "[Not Connected]"}</div>
+        <ConnectionStatusIndicator />
         <div className="px-4 drawer-subnav text-center py-2 border-y border-neutral flex flex-wrap">
           <SectionButton section={SidebarSection.Home} Icon={AiFillHome} />
           <SectionButton

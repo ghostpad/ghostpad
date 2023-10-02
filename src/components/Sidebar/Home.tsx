@@ -28,8 +28,8 @@ const Home = () => {
 
 const MainMenu = () => {
   const dispatch = useDispatch();
-  const { koboldConfig } = useSelector((state: RootState) => {
-    return state.config;
+  const koboldConfig = useSelector((state: RootState) => {
+    return state.config.koboldConfig;
   });
 
   const socketApi = useContext(SocketApiContext);

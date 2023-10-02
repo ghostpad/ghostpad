@@ -1,6 +1,7 @@
 import { store } from "@/store/store";
 import {
   resetStory,
+  setAudioInEnabled,
   updateKoboldVar,
   updatePendingInsertion,
   updatePendingRetry,
@@ -22,6 +23,7 @@ import { SocketApiContext } from "@/socketApi/SocketApiProvider";
 import { addStreamTokens, clearStreamTokens } from "@/store/uiSlice";
 import { clearStreamTokensListener } from "./handlers/clearStreamTokensListener";
 import { addStreamTokensListener } from "./handlers/addStreamTokensListener";
+import { SPEECH_TO_TEXT_COMMAND } from "./SpeechToTextPlugin";
 
 const KoboldPlugin = () => {
   const [editor] = useLexicalComposerContext();
@@ -98,6 +100,13 @@ const KoboldPlugin = () => {
       },
     });
 
+    const removeAudioInListener = koboldConfigMiddleware.startListening({
+      actionCreator: setAudioInEnabled,
+      effect: (action) => {
+        editor.dispatchCommand(SPEECH_TO_TEXT_COMMAND, action.payload)
+      }
+    });
+
     const { socketState } = store.getState().connection;
     if (socketState === SocketState.LOADING) {
       dispatch(
@@ -113,6 +122,7 @@ const KoboldPlugin = () => {
       removePendingInsertionListener();
       removePendingRetryListener();
       removeResetStoryListener();
+      removeAudioInListener();
     };
   }, [editor, dispatch, socketApi]);
 

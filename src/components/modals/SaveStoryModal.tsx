@@ -5,21 +5,21 @@ import { closeModal, openModal } from "@/store/uiSlice";
 import { SocketApiContext } from "@/socketApi/SocketApiProvider";
 
 export const SaveStoryModal = () => {
-  const { koboldConfig, ui: uiState } = useSelector((state: RootState) => {
-    return { koboldConfig: state.config.koboldConfig, ui: state.ui };
-  }, shallowEqual);
+  const storyConfig = useSelector((state: RootState) => {
+    return state.config.koboldConfig.story;
+  });
+  const modalState = useSelector((state: RootState) => {
+    return state.ui.modalState;
+  });
 
-  const storyName = koboldConfig?.story?.story_name || "New Story";
+  const storyName = storyConfig?.story_name || "New Story";
   const socketApi = useContext(SocketApiContext);
   const [newName, setNewName] = useState(storyName);
   const dispatch = useDispatch();
-  return !uiState.modalState.saveStory.active ? null : (
+  return !modalState.saveStory.active ? null : (
     <>
       <input type="checkbox" id="save-modal" className="modal-toggle" />
-      <div
-        className={"modal modal-open"
-        }
-      >
+      <div className={"modal modal-open"}>
         <div className="modal-box">
           <h3 className="font-bold text-lg">Save Story</h3>
           <p className="py-4">

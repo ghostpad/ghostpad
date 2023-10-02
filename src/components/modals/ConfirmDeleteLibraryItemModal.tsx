@@ -6,8 +6,8 @@ import { fetchLibraryItems } from "@/util/fetchLibraryItems";
 import { deleteLibraryItem } from "@/ghostpadApi/deleteLibraryItem";
 
 export const ConfirmDeleteLibraryItemModal = () => {
-  const { modalState } = useSelector((state: RootState) => {
-    return state.ui;
+  const modalState = useSelector((state: RootState) => {
+    return state.ui.modalState;
   });
   const dispatch = useDispatch();
   if (!modalState.confirmDeleteLibraryItem.data) return null;
