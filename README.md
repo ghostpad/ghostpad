@@ -1,17 +1,19 @@
 ## Ghostpad
 ### A free AI text generation interface based on KoboldAI
 
+**Update 09/24/2023: Exllamav2 and AutoAWQ are now both supported in the [Kobold fork](https://github.com/ghostpad/ghostpad/tree/main#:~:text=https%3A//github.com/ghostpad/koboldai%2Dghostpad).**
+
 Ghostpad builds upon [KoboldAI](https://github.com/KoboldAI/KoboldAI-Client) to offer:
 - A new mobile-first UI with customizable fonts and themes
 - A "continue" feature, which can be used to generate text mid-story, starting at your cursor.
 - A library for your world info and text. Individual memories, author's notes, and world info entries can be saved. These can then be combined together, allowing for a "building block" style experience when designing scenarios and characters.
 - Real time edits. Instead of syncing with the server when you defocus the text editor, your changes always take effect immediately.
+- WPP to text. If you've ever designed a character using the WPP format and wanted to combine it with plain text, you can now do this with the "Insert WPP in Text" button.
+- Hugging Face search
 
 Ghostpad began as a lightweight personal project that I built so I could more comfortably use LLMs from my couch. It continued to grow and evolve until I decided it's worth sharing with the world.
 
-### Demo Vid
-
-https://github.com/ghostpad/ghostpad/assets/1075900/935b1d25-ac37-4d0a-9bbb-f684d22cfd50
+https://github.com/ghostpad/ghostpad/assets/1075900/273034da-05f3-4652-aad0-78ef2399d310
 
 ### Release Notes - 0.1
 - This is the very first public release. If everything works perfectly, then I am the luckiest person on this entire planet. But I'm not, and there will be bugs.
@@ -24,7 +26,7 @@ https://github.com/ghostpad/ghostpad/assets/1075900/935b1d25-ac37-4d0a-9bbb-f684
 - [Node.js](https://nodejs.org/)
 
 ### Installation
-1. Follow the koboldai-ghostpad installation instructions for your system.
+1. Follow the [koboldai-ghostpad](https://github.com/ghostpad/koboldai-ghostpad) installation instructions for your system and run it.
 
 2. Clone Ghostpad, install dependencies, build.
 ```bash
@@ -67,3 +69,22 @@ Some of the biggest differences between Ghostpad and KoboldAI are the technical 
 - Various backend optimizations: For phase 1 of this project, I self-imposed a rule to avoid complex backend changes. That rule is now cautiously lifted. Anything suitable for upstream Kobold will be opened there. There's still very much a need to avoid "hard fork" changes that will fragment community efforts.
 - Stable Diffusion integration: would be nice to have
 - Themes: The themes are currently default DaisyUI themes, and I want to build a selection of custom themes
+
+### Misc Demo Videos
+
+Continuing generation mid-story
+
+
+
+https://github.com/ghostpad/ghostpad/assets/1075900/205692c5-aef9-4bea-99ce-1cf97e2100c1
+
+
+
+Opening the Hugging Face browser and loading a tiny model
+
+
+
+
+https://github.com/ghostpad/ghostpad/assets/1075900/dc204936-115f-4227-b3d9-b854c26c4107
+
+
