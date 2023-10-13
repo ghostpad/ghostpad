@@ -26,9 +26,12 @@ model_backend_name = "AutoAWQ"
 def get_awq_file(path):
     safetensors_file = os.path.join(path, "model.safetensors")
     pt_file = os.path.join(path, "model.ckpt")
-    awq_file = safetensors_file if os.path.isfile(safetensors_file) else pt_file
-
-    return awq_file
+    if (os.path.isfile(safetensors_file)):
+        return safetensors_file
+    elif (os.path.isfile(pt_file)):
+        return pt_file
+    else:
+        return ""
 
 class model_backend(HFTorchInferenceModel):
     def __init__(self) -> None:

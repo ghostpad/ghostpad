@@ -1,3 +1,6 @@
+# Ignore Ghostpad's node_modules
+ghostpad/node_modules
+
 # Ignore client settings file
 settings
 

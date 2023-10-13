@@ -31,7 +31,8 @@ dependencies:
     - flask-ngrok
     - flask-cors
     - lupa==2.0
-    - transformers[sentencepiece]==4.33.1
+    # - transformers[sentencepiece]==4.33.1
+    - git+https://github.com/huggingface/transformers
     - huggingface_hub==0.16.4
     - optimum[onnxruntime]==1.12.0
     - safetensors==0.3.3
@@ -50,8 +51,9 @@ dependencies:
     - https://github.com/0cc4m/GPTQ-for-LLaMa/archive/refs/tags/0.0.6.tar.gz
     - https://github.com/PanQiWei/AutoGPTQ/releases/download/v0.4.1/auto_gptq-0.4.1+cu118-cp310-cp310-linux_x86_64.whl; sys_platform == 'linux'
     - https://github.com/PanQiWei/AutoGPTQ/releases/download/v0.4.1/auto_gptq-0.4.1+cu118-cp310-cp310-win_amd64.whl; sys_platform == 'win32'
-    - https://github.com/casper-hansen/AutoAWQ/releases/download/v0.1.0/autoawq-0.1.0-cp310-cp310-linux_x86_64.whl; sys_platform == 'linux'
-    - https://github.com/casper-hansen/AutoAWQ/releases/download/v0.1.0/autoawq-0.1.0-cp310-cp310-win_amd64.whl; sys_platform == 'win32'
+    # - https://github.com/casper-hansen/AutoAWQ/releases/download/v0.1.0/autoawq-0.1.0-cp310-cp310-linux_x86_64.whl; sys_platform == 'linux'
+    # - https://github.com/casper-hansen/AutoAWQ/releases/download/v0.1.0/autoawq-0.1.0-cp310-cp310-win_amd64.whl; sys_platform == 'win32'
+    - git+https://github.com/casper-hansen/AutoAWQ
     - einops
     - peft==0.3.0
     - scipy

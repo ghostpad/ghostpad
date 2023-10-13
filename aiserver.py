@@ -3308,7 +3308,7 @@ def actionsubmit(
                 data = f"\n\n> {data}\n"
         
         # "Chat" mode
-        if(koboldai_vars.chatmode and koboldai_vars.gamestarted):
+        if(koboldai_vars.chatmode):
             if(koboldai_vars.botname):
                 botname = (koboldai_vars.botname + ":")
             else:
@@ -5562,9 +5562,194 @@ def lite_html():
     return send_from_directory('static', "klite.html")
 
 #==================================================================#
-# UI V2 CODE
+# Ghostpad
 #==================================================================#
 @app.route('/')
+@app.route('/ghostpad')
+@require_allowed_ip
+@logger.catch
+def ghostpad_html():
+    return send_from_directory('static/ghostpad', "index.html")
+
+default_ghostpad_config = {
+    "theme": "dark",
+    "host": "",
+    "editorLocalFont": "Helvetica",
+    "editorFontSize": 14,
+    "useGoogleFont": True,
+    "editorGoogleFont": {
+        "linkFamily": "Manrope",
+        "cssFamily": "Manrope"
+    },
+    "speechSynthesisVoice": "Martha",
+    "speechSynthesisLanguage": "en-GB",
+    "editorFont": "Garamond, \"Hoefler Text\", \"Times New Roman\", Times, serif"
+}
+
+def ensure_ghostpad_structure():
+    if not path.exists("settings/ghostpad"):
+        os.mkdir("settings/ghostpad")
+    if not path.exists("settings/ghostpad/library"):
+        os.mkdir("settings/ghostpad/library")
+    if not path.exists("settings/ghostpad/library/wi"):
+        os.mkdir("settings/ghostpad/library/wi")
+    if not path.exists("settings/ghostpad/library/text"):
+        os.mkdir("settings/ghostpad/library/text")
+
+@app.route('/ghostpad/api/config', methods=['GET'])
+@require_allowed_ip
+@logger.catch
+def get_ghostpad_config():
+    ensure_ghostpad_structure()
+    try:
+        file = open("settings/ghostpad/config.json", "r")
+        json_data   = json.load(file)
+        file.close()
+        return json_data
+    except:
+        # If the file doesn't exist, create it
+        file = open("settings/ghostpad/config.json", "w")
+        json.dump(default_ghostpad_config, file)
+        file.close()
+        return default_ghostpad_config
+
+def merge_deep_right(a, b):
+    if isinstance(a, dict) and isinstance(b, dict):
+        merged = {}
+        for key in set(a.keys()) | set(b.keys()):
+            if key in a and key in b:
+                merged[key] = merge_deep_right(a[key], b[key])
+            elif key in a:
+                merged[key] = a[key]
+            else:
+                merged[key] = b[key]
+        return merged
+    else:
+        return b if b is not None else a
+
+@app.route('/ghostpad/api/update_config', methods=['POST'])
+@require_allowed_ip
+@logger.catch
+def update_ghostpad_config():
+    ensure_ghostpad_structure()
+    if request.method == "POST":
+        request_data = json.loads(request.get_data())
+        config_update = request_data["configUpdate"]
+        ghostpad_config = merge_deep_right(default_ghostpad_config, get_ghostpad_config())
+        updated_ghostpad_config = merge_deep_right(ghostpad_config, config_update)
+        try:
+            file = open("settings/ghostpad/config.json", "w")
+            json.dump(updated_ghostpad_config, file)
+            file.close()
+            return updated_ghostpad_config
+        except:
+            return "Internal Server Error", 500
+
+@app.route('/ghostpad/api/library/list', methods=['GET'])
+@require_allowed_ip
+@logger.catch
+def list_ghostpad_library():
+    ensure_ghostpad_structure()
+    file_type = request.args.get("fileType")
+    if file_type not in ["wi", "text"]:
+        return "Bad Request", 400
+    library_path = path.join("settings/ghostpad/library", file_type)
+    items = [{"name": path.splitext(path.basename(item))[0], "filename": item} 
+             for item in os.listdir(library_path) if
+             (file_type == "wi" and item.endswith(".json")) or (file_type == "text" and item.endswith(".txt")
+    )]
+    items.sort(key=lambda x: x["name"])
+
+    return json.dumps(items)
+
+@app.route('/ghostpad/api/library/load', methods=['GET'])
+@require_allowed_ip
+@logger.catch
+def load_from_ghostpad_library():
+    ensure_ghostpad_structure()
+    file_type = request.args.get("fileType")
+    file_name = request.args.get("filename")
+    if file_type not in ["wi", "text"]:
+        return "Bad Request", 400
+    file_path = path.join("settings/ghostpad/library", file_type, file_name)
+    if not path.exists(file_path):
+        return "Not Found", 404
+    with open(file_path, "r") as file:
+        file_contents = file.read()
+    return json.dumps({"fileContents": json.loads(file_contents) if file_type == "wi" else file_contents})
+
+def sanitize_filename(filename):
+    return re.sub(r"[/\\?%*:|\"<>]", "-", filename)
+
+@app.route('/ghostpad/api/library/remove', methods=['POST'])
+@require_allowed_ip
+@logger.catch
+def remove_from_ghostpad_library():
+    ensure_ghostpad_structure()
+    request_data = json.loads(request.get_data())
+    file_type = request_data.get("fileType")
+    file_name = request_data.get("filename")
+    if file_type not in ["wi", "text"]:
+        return "Bad Request", 400
+    sanitized_filename = sanitize_filename(file_name)
+    file_ext = ".json" if file_type == "wi" else ".txt"
+    file_path = path.join("settings/ghostpad/library", file_type, sanitized_filename + file_ext)
+    if not path.exists(file_path):
+        return "Not Found", 404
+    os.remove(file_path)
+    return "OK", 200
+
+@app.route('/ghostpad/api/library/rename', methods=['POST'])
+@require_allowed_ip
+@logger.catch
+def rename_in_ghostpad_library():
+    ensure_ghostpad_structure()
+    request_data = json.loads(request.get_data())
+    file_type = request_data.get("fileType")
+    file_name = request_data.get("filename")
+    new_name = request_data.get("newName")
+    if file_type not in ["wi", "text"]:
+        return "Bad Request", 400
+    sanitized_filename = sanitize_filename(file_name)
+    file_path = path.join("settings/ghostpad/library", file_type, sanitized_filename)
+    if not path.exists(file_path):
+        return "Not Found", 404
+    file_ext = ".json" if file_type == "wi" else ".txt"
+    sanitized_new_name = sanitize_filename(new_name + file_ext)
+    if (len(sanitized_new_name) == 0):
+        return "Bad Request", 400
+    new_file_path = path.join("settings/ghostpad/library", file_type, sanitized_new_name)
+    if path.exists(new_file_path):
+        return "Conflict", 409
+    os.rename(file_path, new_file_path)
+    return "OK", 200
+
+@app.route('/ghostpad/api/library/save', methods=['POST'])
+@require_allowed_ip
+@logger.catch
+def save_to_ghostpad_library():
+    ensure_ghostpad_structure()
+    request_data = json.loads(request.get_data())
+    file_type = request_data.get("fileType")
+    file_name = request_data.get("filename")
+    content = request_data.get("content")
+    overwrite = request_data.get("overwrite")
+    if file_type not in ["wi", "text"]:
+        return "Bad Request UwU" + file_type, 400
+    sanitized_filename = sanitize_filename(file_name)
+    file_ext = ".json" if file_type == "wi" else ".txt"
+    file_path = path.join("settings/ghostpad/library", file_type, sanitized_filename + file_ext)
+    if (len(sanitized_filename) == 0):
+        return "Bad Request scawy filename length", 400
+    if path.exists(file_path) and not overwrite:
+        return "Conflict", 409
+    with open(file_path, "w") as file:
+        file.write(content)
+    return "OK", 200
+
+#==================================================================#
+# UI V2 CODE
+#==================================================================#
 @app.route('/new_ui')
 @require_allowed_ip
 @logger.catch

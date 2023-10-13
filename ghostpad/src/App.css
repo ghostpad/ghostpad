@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --unit-100vh: 100vh;
+}
+@supports (height: 100dvh) {
+  :root {
+      --unit-100vh: 100dvh;
+  }
+}
+
+html,
+body {
+touch-action: none;
+}
+
+.h-screen-dvh {
+height: var(--unit-100vh);
+}
+
+.editor-root, .font-preview, .commentary-box, #user-input {
+outline: none;
+font-family: var(--editor-font);
+font-size: var(--editor-font-size);
+}
+
+.action {
+display: inline;
+}
+
+.action:empty {
+display: none;
+}
+
+.action br:only-child, .action br:last-child {
+  display: none;
+}
+
+.action:last-child br:last-child {
+display:inline;
+}
+
+.drawer-side > *:not(.drawer-overlay) {
+  transition: transform 0.2s cubic-bezier(0, 0, 0.2, 1);
+}
