@@ -47,4 +47,4 @@ dependencies:
     - peft==0.3.0
     - windows-curses; sys_platform == 'win32'
     - pynvml
-    - https://github.com/PanQiWei/AutoGPTQ/releases/download/v0.4.2/auto_gptq-0.4.2+rocm5.4.2-cp38-cp38-linux_x86_64.whl
+    - https://github.com/PanQiWei/AutoGPTQ/releases/download/v0.4.2/auto_gptq-0.4.2+rocm5.4.2-cp310-cp310-linux_x86_64.whl
