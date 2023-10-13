@@ -1,6 +1,8 @@
 ## Ghostpad
 ### A free AI text generation interface based on KoboldAI
 
+**Update 10/13/2013: Ghostpad is now a static frontend built using Bun and Vite, and served through KoboldAI's backend. This means the installation steps are now identical to those of Kobold, and you no longer need to run any `npm` commands.**
+
 Ghostpad builds upon [KoboldAI](https://github.com/KoboldAI/KoboldAI-Client) to offer:
 - A new mobile-first UI with customizable fonts and themes
 - A "continue" feature, which can be used to generate text mid-story, starting at your cursor.
