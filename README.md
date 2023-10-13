@@ -14,7 +14,7 @@ Ghostpad builds upon [KoboldAI](https://github.com/KoboldAI/KoboldAI-Client) to 
 https://github.com/ghostpad/ghostpad/assets/1075900/273034da-05f3-4652-aad0-78ef2399d310
 
 ### Installation
-1. Follow the [KoboldAI installation instructions]([https://github.com/ghostpad/koboldai-ghostpad](https://github.com/henk717/KoboldAI#install-koboldai-on-your-own-computer)).
+1. Follow the [KoboldAI installation instructions] ([https://github.com/ghostpad/koboldai-ghostpad](https://github.com/henk717/KoboldAI#install-koboldai-on-your-own-computer)).
 
 2. Open [http://localhost:5000](http://localhost:5000) in your browser.  You can access KoboldAI UI2 through http://localhost:5000/new_ui and UI1 through http://localhost:5000/classic
 
