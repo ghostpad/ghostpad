@@ -59,7 +59,8 @@ dependencies:
     - peft==0.3.0
     - scipy
     - https://github.com/0cc4m/exllama/archive/refs/tags/0.0.7.tar.gz
-    - exllamav2==0.0.5
+    - exllamav2==0.0.5; sys_platform == 'linux'
+    - git+https://github.com/turboderp/exllamav2.git; sys_platform == 'win32'
     - windows-curses; sys_platform == 'win32'
     - pynvml
     - xformers==0.0.21
