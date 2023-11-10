@@ -273,6 +273,7 @@ model_menu = {
         MenuModel("Read Only (No AI)", "ReadOnly", model_type=MenuModelType.OTHER, model_backend="Read Only"),
     ],
     'instructlist': [
+        MenuModel("Tiefighter 13B", "KoboldAI/LLaMA2-13B-Tiefighter", "12GB*"),   
         MenuModel("Holomax 13B", "KoboldAI/LLaMA2-13B-Holomax", "12GB*"),        
         MenuModel("Mythomax 13B", "Gryphe/MythoMax-L2-13b", "12GB*"),
         MenuModel("Chronos-Hermes V2 13B", "Austism/chronos-hermes-13b-v2", "12GB*"),
@@ -283,6 +284,7 @@ model_menu = {
         ],
     'adventurelist': [
         MenuFolder("Instruct models may perform better than the models below (Using Instruct mode)", "instructlist"),
+        MenuModel("Tiefighter 13B (Instruct Hybrid)", "KoboldAI/LLaMA2-13B-Tiefighter", "12GB*"),
         MenuModel("Skein 20B", "KoboldAI/GPT-NeoX-20B-Skein", "20GB*"),
         MenuModel("Nerys OPT 13B V2 (Hybrid)", "KoboldAI/OPT-13B-Nerys-v2", "12GB"),
         MenuModel("Spring Dragon 13B", "Henk717/spring-dragon", "12GB*"),
@@ -298,6 +300,7 @@ model_menu = {
         MenuFolder("Return to Main Menu", "mainmenu"),
         ],
     'novellist': [
+        MenuModel("Tiefighter 13B (Instruct Hybrid)", "KoboldAI/LLaMA2-13B-Tiefighter", "12GB*"),
         MenuModel("Nerys OPT 13B V2 (Hybrid)", "KoboldAI/OPT-13B-Nerys-v2", "32GB"),
         MenuModel("Nerys FSD 13B V2 (Hybrid)", "KoboldAI/fairseq-dense-13B-Nerys-v2", "32GB"),
         MenuModel("Janeway FSD 13B", "KoboldAI/fairseq-dense-13B-Janeway", "32GB"),
@@ -2654,9 +2657,8 @@ def get_message(msg):
         if(koboldai_vars.mode == "play"):
             if(koboldai_vars.aibusy):
                 if(msg.get('allowabort', False)):
-                    koboldai_vars.abort = True
+                    model.abort_generation()
                 return
-            koboldai_vars.abort = False
             koboldai_vars.lua_koboldbridge.feedback = None
             if(koboldai_vars.chatmode):
                 if(type(msg['chatname']) is not str):
@@ -2676,9 +2678,8 @@ def get_message(msg):
     elif(msg['cmd'] == 'retry'):
         if(koboldai_vars.aibusy):
             if(msg.get('allowabort', False)):
-                koboldai_vars.abort = True
+                model.abort_generation()
             return
-        koboldai_vars.abort = False
         if(koboldai_vars.chatmode):
             if(type(msg['chatname']) is not str):
                 raise ValueError("Chatname must be a string")
@@ -3344,7 +3345,7 @@ def actionsubmit(
                 # Clear the startup text from game screen
                 emit('from_server', {'cmd': 'updatescreen', 'gamestarted': False, 'data': 'Please wait, generating story...'}, broadcast=True, room="UI_1")
                 calcsubmit("", gen_mode=gen_mode) # Run the first action through the generator
-                if(not koboldai_vars.abort and koboldai_vars.lua_koboldbridge.restart_sequence is not None and len(koboldai_vars.genseqs) == 0):
+                if(not model.abort and koboldai_vars.lua_koboldbridge.restart_sequence is not None and len(koboldai_vars.genseqs) == 0):
                     data = ""
                     force_submit = True
                     disable_recentrng = True
@@ -3370,13 +3371,13 @@ def actionsubmit(
                     refresh_story()
                     if(len(koboldai_vars.actions) > 0):
                         emit('from_server', {'cmd': 'texteffect', 'data': koboldai_vars.actions.get_last_key() + 1}, broadcast=True, room="UI_1")
-                    if(not koboldai_vars.abort and koboldai_vars.lua_koboldbridge.restart_sequence is not None):
+                    if(not model.abort and koboldai_vars.lua_koboldbridge.restart_sequence is not None):
                         data = ""
                         force_submit = True
                         disable_recentrng = True
                         continue
                 else:
-                    if(not koboldai_vars.abort and koboldai_vars.lua_koboldbridge.restart_sequence is not None and koboldai_vars.lua_koboldbridge.restart_sequence > 0):
+                    if(not model.abort and koboldai_vars.lua_koboldbridge.restart_sequence is not None and koboldai_vars.lua_koboldbridge.restart_sequence > 0):
                         genresult(genout[koboldai_vars.lua_koboldbridge.restart_sequence-1]["generated_text"], flash=False)
                         refresh_story()
                         data = ""
@@ -3410,7 +3411,7 @@ def actionsubmit(
             if(not no_generate and not koboldai_vars.noai and koboldai_vars.lua_koboldbridge.generating):
                 # Off to the tokenizer!
                 calcsubmit("", gen_mode=gen_mode)
-                if(not koboldai_vars.abort and koboldai_vars.lua_koboldbridge.restart_sequence is not None and len(koboldai_vars.genseqs) == 0):
+                if(not model.abort and koboldai_vars.lua_koboldbridge.restart_sequence is not None and len(koboldai_vars.genseqs) == 0):
                     data = ""
                     force_submit = True
                     disable_recentrng = True
@@ -3431,13 +3432,13 @@ def actionsubmit(
                 genout = [{"generated_text": x['text']} for x in koboldai_vars.actions.get_current_options()]
                 if(len(genout) == 1):
                     genresult(genout[0]["generated_text"])
-                    if(not no_generate and not koboldai_vars.abort and koboldai_vars.lua_koboldbridge.restart_sequence is not None):
+                    if(not no_generate and not model.abort and koboldai_vars.lua_koboldbridge.restart_sequence is not None):
                         data = ""
                         force_submit = True
                         disable_recentrng = True
                         continue
                 else:
-                    if(not no_generate and not koboldai_vars.abort and koboldai_vars.lua_koboldbridge.restart_sequence is not None and koboldai_vars.lua_koboldbridge.restart_sequence > 0):
+                    if(not no_generate and not model.abort and koboldai_vars.lua_koboldbridge.restart_sequence is not None and koboldai_vars.lua_koboldbridge.restart_sequence > 0):
                         genresult(genout[koboldai_vars.lua_koboldbridge.restart_sequence-1]["generated_text"])
                         data = ""
                         force_submit = True
@@ -6389,7 +6390,7 @@ def UI_2_submit(data):
 def UI_2_abort(data):
     if koboldai_vars.debug:
         print("got abort")
-    koboldai_vars.abort = True
+    model.abort_generation()
 
  
 #==================================================================#
@@ -7570,7 +7571,7 @@ def text2img_local(prompt: str) -> Optional[Image.Image]:
     if koboldai_vars.image_pipeline is None:
         if not os.path.exists("functional_models/stable-diffusion/model_index.json"):
             from huggingface_hub import snapshot_download
-            snapshot_download("XpucT/Deliberate", local_dir="functional_models/stable-diffusion", local_dir_use_symlinks=False, cache_dir="cache/", ignore_patterns=["*.safetensors"])
+            snapshot_download("peterwilli/deliberate-2", local_dir="functional_models/stable-diffusion", local_dir_use_symlinks=False, cache_dir="cache/", ignore_patterns=["*.safetensors"])
         pipe = tpool.execute(StableDiffusionPipeline.from_pretrained, "functional_models/stable-diffusion", safety_checker=None, torch_dtype=torch.float16).to("cuda")
     else:
         pipe = koboldai_vars.image_pipeline.to("cuda")
@@ -7773,6 +7774,19 @@ def text2img_api(prompt, art_guide="") -> Image.Image:
 def UI2_clear_generated_image(data):
     koboldai_vars.picture = ""
     koboldai_vars.picture_prompt = ""
+
+#==================================================================#
+# Retrieve previous images
+#==================================================================#
+@socketio.on("get_story_image")
+@logger.catch
+def UI_2_get_story_image(data):
+    action_id = data['action_id']
+    (filename, prompt) = koboldai_vars.actions.get_picture(action_id)
+    print(filename)
+    if filename is not None:
+        with open(filename, "rb") as image_file:
+            return base64.b64encode(image_file.read()).decode("utf-8") 
 
 #@logger.catch
 def get_items_locations_from_text(text):
@@ -8109,10 +8123,70 @@ def UI_2_audio():
         start_time = time.time()
         while not os.path.exists(filename) and time.time()-start_time < 60: #Waiting up to 60 seconds for the file to be generated
             time.sleep(0.1)
-    return send_file(
-             filename, 
-             mimetype="audio/ogg")
+    if os.path.exists(filename):
+        return send_file(
+                filename, 
+                mimetype="audio/ogg")
+    show_error_notification("Error generating audio chunk", f"Something happened. Maybe check the log?")
 
+#==================================================================#
+# Download complete audio file
+#==================================================================#
+@socketio.on("gen_full_audio")
+def UI_2_gen_full_audio(data):
+    from pydub import AudioSegment
+    if args.no_ui:
+        return redirect('/api/latest')
+    
+    logger.info("Generating complete audio file")
+    combined_audio = None
+    complete_filename = os.path.join(koboldai_vars.save_paths.generated_audio, "complete.ogg")
+    for action_id in range(-1, koboldai_vars.actions.action_count+1):
+        filename = os.path.join(koboldai_vars.save_paths.generated_audio, f"{action_id}.ogg")
+        filename_slow = os.path.join(koboldai_vars.save_paths.generated_audio, f"{action_id}_slow.ogg")
+        
+        
+        if os.path.exists(filename_slow):
+            if combined_audio is None:
+                combined_audio = AudioSegment.from_file(filename_slow, format="ogg")
+            else:
+                combined_audio = combined_audio + AudioSegment.from_file(filename_slow, format="ogg")
+        elif os.path.exists(filename):
+            if combined_audio is None:
+                combined_audio = AudioSegment.from_file(filename, format="ogg")
+            else:
+                combined_audio = combined_audio + AudioSegment.from_file(filename, format="ogg")
+        else:
+            logger.info("Action {} has no audio. Generating now".format(action_id))
+            koboldai_vars.actions.gen_audio(action_id)
+            while not os.path.exists(filename) and time.time()-start_time < 60: #Waiting up to 60 seconds for the file to be generated
+                time.sleep(0.1)
+            if os.path.exists(filename):
+                if combined_audio is None:
+                    combined_audio = AudioSegment.from_file(filename, format="ogg")
+                else:
+                    combined_audio = combined_audio + AudioSegment.from_file(filename, format="ogg")
+            else:
+                show_error_notification("Error generating audio chunk", f"Something happened. Maybe check the log?")
+        
+    logger.info("Sending audio file")
+    file_handle = combined_audio.export(complete_filename, format="ogg")
+    return True
+    
+
+@app.route("/audio_full")
+@require_allowed_ip
+@logger.catch
+def UI_2_audio_full():
+    logger.info("Downloading complete audio file")
+    complete_filename = os.path.join(koboldai_vars.save_paths.generated_audio, "complete.ogg")
+    if os.path.exists(complete_filename):
+        return send_file(
+                 complete_filename, 
+                 as_attachment=True,
+                 download_name = koboldai_vars.story_name,
+                 mimetype="audio/ogg")
+             
 
 #==================================================================#
 # Download of the image for an action
@@ -8380,7 +8454,7 @@ class GenerationOutputSchema(KoboldSchema):
     results: List[GenerationResultSchema] = fields.List(fields.Nested(GenerationResultSchema), required=True, metadata={"description": "Array of generated outputs."})
 
 class StoryNumsChunkSchema(KoboldSchema):
-    num: int = fields.Integer(required=True, metadata={"description": "Guaranteed to not equal the `num` of any other active story chunk. Equals 0 iff this is the first action of the story (the prompt)."})
+    num: int = fields.Integer(required=True, metadata={"description": "Guaranteed to not equal the `num` of any other active story chunk. Equals 0 if this is the first action of the story (the prompt)."})
 
 class StoryChunkSchema(StoryNumsChunkSchema, KoboldSchema):
     text: str = fields.String(required=True, metadata={"description": "The text inside this story chunk."})
