@@ -28,6 +28,7 @@ dependencies:
   - termcolor
   - Pillow
   - psutil
+  - ffmpeg
   - pip:
     - flask-cloudflared==0.0.10
     - flask-ngrok
@@ -59,8 +60,9 @@ dependencies:
     - peft==0.3.0
     - scipy
     - https://github.com/0cc4m/exllama/archive/refs/tags/0.0.7.tar.gz
-    - exllamav2==0.0.5
+    - exllamav2==0.0.7
     - windows-curses; sys_platform == 'win32'
     - pynvml
     - xformers==0.0.21
     - https://github.com/Dao-AILab/flash-attention/releases/download/v2.3.0/flash_attn-2.3.0+cu118torch2.0cxx11abiFALSE-cp310-cp310-linux_x86_64.whl; sys_platform == 'linux'
+    - omegaconf
