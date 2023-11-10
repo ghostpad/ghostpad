@@ -205,7 +205,7 @@ const syncConfig = debounce(
     const res = await saveGhostpadConfig(configUpdate);
     const updatedConfig = await res.json();
     dispatch(updateGhostpadConfig(updatedConfig));
-    if (configUpdate.host) {
+    if ('host' in configUpdate) {
       dispatch(
         updateSocketState({ socketState: SocketState.READY_TO_CONNECT })
       );

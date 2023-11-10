@@ -197,7 +197,7 @@ export const WorldInfoCard = ({
           </button>
           <div className="mt-4 flex">
             <SyncToggle
-              label="Use WPP"
+              label="Use Traits"
               className="flex-1"
               value={worldInfoEntry.use_wpp}
               timestamp={timestamp}
@@ -340,7 +340,7 @@ ${worldInfoEntry.manual_text}`,
                 disabled={!worldInfoEntry.use_wpp}
                 className="btn btn-sm btn-neutral w-full mb-4"
               >
-                Insert WPP In Text
+                Insert Traits In Text
               </button>
               <div className="flex space-x-2 mb-4">
                 <button
@@ -357,7 +357,7 @@ ${worldInfoEntry.manual_text}`,
                   }}
                   className="btn btn-sm btn-neutral flex-1"
                 >
-                  <PiBracketsCurlyBold size="1.5em" /> Load WPP
+                  <PiBracketsCurlyBold size="1.5em" /> Load Traits
                 </button>
               </div>
               <WPPEditor

@@ -2,22 +2,19 @@ import { SocketState, updateSocketState } from "@/store/connectionSlice";
 import { RootState } from "@/store/store";
 import {
   createContext,
-  Dispatch,
   PropsWithChildren,
-  SetStateAction,
   useEffect,
-  useState,
+  useRef,
 } from "react";
 import { shallowEqual, useDispatch, useSelector } from "react-redux";
 import { io, Socket } from "socket.io-client";
 
 export const SocketContext = createContext<{
   socket?: Socket;
-  setSocket?: Dispatch<SetStateAction<Socket | undefined>>;
 }>({});
 
 export const SocketProvider = ({ children }: PropsWithChildren) => {
-  const [socket, setSocket] = useState<Socket>();
+  const socket = useRef<Socket>();
   const dispatch = useDispatch();
   const { ghostpadConfig, socketState } = useSelector((state: RootState) => {
     return {
@@ -25,9 +22,17 @@ export const SocketProvider = ({ children }: PropsWithChildren) => {
       socketState: state?.connection.socketState,
     };
   }, shallowEqual);
+  useEffect(() => {
+    return () => {
+      if (socket.current?.connected) {
+        socket.current?.disconnect();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const connectSocket = () => {
+      dispatch(updateSocketState({ socketState: SocketState.DISCONNECTED }));
       const newSocket = io(ghostpadConfig?.host || window.location.host, {
         transports: ["polling", "websocket"],
         closeOnBeforeunload: false,
@@ -39,20 +44,15 @@ export const SocketProvider = ({ children }: PropsWithChildren) => {
       newSocket.on("connect", () => {
         dispatch(updateSocketState({ socketState: SocketState.CONNECTED }));
       });
-      setSocket(newSocket);
-      dispatch(updateSocketState({ socketState: SocketState.DISCONNECTED }));
+      socket.current = newSocket;
     };
 
     if (socketState === SocketState.READY_TO_CONNECT) {
       connectSocket();
     }
-
-    return () => {
-      if (socketState === SocketState.READY_TO_CONNECT) socket?.disconnect();
-    };
-  }, [socket, setSocket, socketState, ghostpadConfig?.host, dispatch]);
+  }, [socketState, ghostpadConfig?.host, dispatch]);
   return (
-    <SocketContext.Provider value={{ socket, setSocket }}>
+    <SocketContext.Provider value={{ socket: socket?.current }}>
       {children}
     </SocketContext.Provider>
   );
