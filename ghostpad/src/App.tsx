@@ -73,7 +73,8 @@ const GenerateButton = ({
           const textArea = textAreaRef?.current;
           if (textArea) {
             const isInitialPrompt =
-              storyConfig?.prompt_wi_highlighted_text.length == 0;
+              storyConfig?.prompt_wi_highlighted_text.length == 0 ||
+              storyConfig?.prompt_wi_highlighted_text[0]?.text == "";
             const contentfulActions = storyConfig?.actions.filter((action) => {
               return action?.action["Selected Text"].length > 0;
             });

@@ -119,7 +119,7 @@ class model_backend(HFTorchInferenceModel):
                     ),
                 })
 
-            if self.quantization == "4bit" or utils.koboldai_vars.colab_arg:
+            if self.quantization == "4bit":
                 tf_kwargs.update({
                     "quantization_config":BitsAndBytesConfig(
                         load_in_4bit=True,

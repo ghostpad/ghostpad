@@ -1,3 +1,23 @@
+**Release Notes - 0.0.7**
+- Remove Horde related code
+- Remove Colab / TPU related code
+- Remove Aetherroom related ccde
+- Upgrade transformers to latest
+- Upgrade AutoAWQ to latest
+- Upgrade ExLlamaV2 to latest
+- Upgrade Flash Attention to latest
+- Fix bugs where first action was prepended with a newline
+- Remove Basic Huggingface backend
+- Remove basic API backend
+- Remove GooseAI backend
+- Remove OpenAI backend
+- Add “Stop on EOS” option which fixes some Yi models producing a `</s>` followed by nonsense.
+- Set default mode to chat mode
+- Set default username to “User”
+- Set default bot name to “Assistant”
+- Set `add_bos_token` to False in AWQ backend
+- Fix “,” characters appearing after periods with some Llamafied Yi models
+
 **Release Notes - 0.0.6**
 - Fix a backend bug where loading a story and editing actions corrupted the internal state and sometimes sent it into a catastrophic infinite loop of edits over the socket. This fix has also been proposed upstream
 - Refactor socket connection code on the frontend to make it more intuitive. No functional changes here.

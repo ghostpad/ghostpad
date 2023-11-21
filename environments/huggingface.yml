@@ -34,7 +34,7 @@ dependencies:
     - flask-ngrok
     - flask-cors
     - lupa==2.0
-    - transformers[sentencepiece]==4.34.0
+    - transformers[sentencepiece]==4.35.2
     - Werkzeug==2.3.7
     - huggingface_hub==0.16.4
     - optimum[onnxruntime]==1.13.2
@@ -54,16 +54,15 @@ dependencies:
     - https://github.com/0cc4m/GPTQ-for-LLaMa/archive/refs/tags/0.0.6.tar.gz
     - https://github.com/PanQiWei/AutoGPTQ/releases/download/v0.4.2/auto_gptq-0.4.2+cu118-cp310-cp310-linux_x86_64.whl; sys_platform == 'linux'
     - https://github.com/PanQiWei/AutoGPTQ/releases/download/v0.4.2/auto_gptq-0.4.2+cu118-cp310-cp310-win_amd64.whl; sys_platform == 'win32'
-    - https://github.com/casper-hansen/AutoAWQ/releases/download/v0.1.4/autoawq-0.1.4-cp310-cp310-win_amd64.whl; sys_platform == 'win32' and python_version == '3.10'
-    - https://github.com/casper-hansen/AutoAWQ/releases/download/v0.1.4/autoawq-0.1.4-cp310-cp310-linux_x86_64.whl; sys_platform == 'linux' and python_version == '3.10'
+    - https://github.com/casper-hansen/AutoAWQ/releases/download/v0.1.7/autoawq-0.1.7+cu118-cp310-cp310-linux_x86_64.whl; sys_platform == 'linux' and python_version == '3.10'
+    - https://github.com/casper-hansen/AutoAWQ/releases/download/v0.1.7/autoawq-0.1.7+cu118-cp310-cp310-win_amd64.whl; sys_platform == 'win32' and python_version == '3.10'
     - einops
     - peft==0.3.0
     - scipy
     - https://github.com/0cc4m/exllama/archive/refs/tags/0.0.7.tar.gz
-    - exllamav2==0.0.7; sys_platform == 'linux'
-    - git+https://github.com/turboderp/exllamav2.git; sys_platform == 'win32'
+    - https://github.com/turboderp/exllamav2/releases/download/v0.0.8/exllamav2-0.0.8-py3-none-any.whl
     - windows-curses; sys_platform == 'win32'
     - pynvml
     - xformers==0.0.21
-    - https://github.com/Dao-AILab/flash-attention/releases/download/v2.3.0/flash_attn-2.3.0+cu118torch2.0cxx11abiFALSE-cp310-cp310-linux_x86_64.whl; sys_platform == 'linux'
+    - https://github.com/Dao-AILab/flash-attention/releases/download/v2.3.4/flash_attn-2.3.4+cu118torch2.0cxx11abiFALSE-cp310-cp310-linux_x86_64.whl; sys_platform == 'linux'
     - omegaconf

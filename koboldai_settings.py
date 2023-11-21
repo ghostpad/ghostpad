@@ -27,7 +27,7 @@ if importlib.util.find_spec("tortoise") is not None:
     from tortoise import api
     from tortoise.utils.audio import load_voices
     
-password_vars = ["horde_api_key", "privacy_password", "img_gen_api_password"]
+password_vars = ["privacy_password", "img_gen_api_password"]
 
 def clean_var_for_emit(value):
     if isinstance(value, KoboldStoryRegister) or isinstance(value, KoboldWorldInfo):
@@ -561,12 +561,6 @@ class koboldai_vars(object):
         return tokens, used_tokens, used_tokens+self.genamt, set(used_world_info)
     
     def is_model_torch(self) -> bool:
-        if self.use_colab_tpu:
-            return False
-
-        if self.model in ["Colab", "API", "CLUSTER", "ReadOnly", "OAI"]:
-            return False
-
         return True
     
     def assign_world_info_to_actions(self, *args, **kwargs):
@@ -690,7 +684,7 @@ class model_settings(settings):
     no_save_variables = ['modelconfig', 'custmodpth', 'generated_tkns', 
                          'loaded_layers', 'total_layers', 'total_download_chunks', 'downloaded_chunks', 'presets', 'default_preset', 
                          'welcome', 'welcome_default', 'simple_randomness', 'simple_creativity', 'simple_repitition',
-                         'badwordsids', 'uid_presets', 'model', 'model_type', 'lazy_load', 'fp32_model', 'modeldim', 'horde_wait_time', 'horde_queue_position', 'horde_queue_size', 'newlinemode', 'tqdm_progress', 'tqdm_rem_time', '_tqdm']
+                         'badwordsids', 'uid_presets', 'model', 'model_type', 'lazy_load', 'fp32_model', 'modeldim','newlinemode', 'tqdm_progress', 'tqdm_rem_time', '_tqdm']
     settings_name = "model"
     default_settings = {"rep_pen" : 1.1, "rep_pen_slope": 1.0, "rep_pen_range": 2048, "temp": 0.5, "top_p": 0.9, "top_k": 0, "top_a": 0.0, "tfs": 1.0, "typical": 1.0,
                         "sampler_order": [6,0,1,2,3,4,5]}
@@ -755,9 +749,6 @@ class model_settings(settings):
         self.selected_preset = ""
         self.uid_presets = []
         self.default_preset = {}
-        self.horde_wait_time = 0
-        self.horde_queue_position = 0
-        self.horde_queue_size = 0
         self.use_alt_rep_pen = False
         
         
@@ -912,13 +903,14 @@ class story_settings(settings):
         self.recentrng   = None   # If a new random game was recently generated without Submitting after, this is the topic used (as a string), otherwise this is None
         self.recentrngm  = None   # If a new random game was recently generated without Submitting after, this is the memory used (as a string), otherwise this is None
         self.useprompt   = False   # Whether to send the full prompt with every submit action
-        self.chatmode    = False
-        self.chatname    = "You"
-        self.botname    = "Bot"
+        self.chatmode    = True
+        self.chatname    = "User"
+        self.botname    = "Assistant"
         self.stop_sequence = []     #use for configuring stop sequences
+        self.stop_on_eos = False
         self.adventure   = False
         self.actionmode  = 0
-        self.storymode   = 0
+        self.storymode   = 2
         self.dynamicscan = False
         self.recentedit  = False
         self.notes       = ""    #Notes for the story. Does nothing but save
@@ -1220,12 +1212,8 @@ class user_settings(settings):
         self.revision    = None
         self.oaiengines  = "https://api.openai.com/v1/engines"
         self.url         = "https://api.inferkit.com/v1/models/standard/generate" # InferKit API URL
-        self.colaburl    = ""     # Ngrok url for Google Colab mode
         self.apikey      = ""     # API key to use for InferKit API calls
         self.oaiapikey   = ""     # API key to use for OpenAI API calls
-        self.horde_api_key = "0000000000"
-        self.horde_worker_name = "My Awesome Instance"
-        self.horde_url = "https://horde.koboldai.net"
         self.model_selected = ""
         
     def __setattr__(self, name, value):
@@ -1247,13 +1235,13 @@ class undefined_settings(settings):
 class system_settings(settings):
     local_only_variables = ['lua_state', 'lua_logname', 'lua_koboldbridge', 'lua_kobold', 
                             'lua_koboldcore', 'regex_sl', 'acregex_ai', 'acregex_ui', 'comregex_ai', 'comregex_ui',
-                            'sp', '_horde_pid', 'inference_config', 'image_pipeline', 
-                            'summarizer', 'summary_tokenizer', 'tts_model', 'rng_states', 'comregex_ai', 'comregex_ui', 'colab_arg']
+                            'sp', 'inference_config', 'image_pipeline', 
+                            'summarizer', 'summary_tokenizer', 'tts_model', 'rng_states', 'comregex_ai', 'comregex_ui']
     no_save_variables = ['lua_state', 'lua_logname', 'lua_koboldbridge', 'lua_kobold', 
-                         'lua_koboldcore', 'sp', 'sp_length', '_horde_pid', 'horde_share', 'aibusy', 
-                         'serverstarted', 'inference_config', 'image_pipeline', 'summarizer', 'on_colab'
-                         'summary_tokenizer', 'use_colab_tpu', 'noai', 'disable_set_aibusy', 'cloudflare_link', 'tts_model',
-                         'generating_image', 'bit_8_available', 'host', 'hascuda', 'usegpu', 'rng_states', 'comregex_ai', 'comregex_ui', 'git_repository', 'git_branch', 'colab_arg']
+                         'lua_koboldcore', 'sp', 'sp_length', 'aibusy', 
+                         'serverstarted', 'inference_config', 'image_pipeline', 'summarizer'
+                         'summary_tokenizer', 'noai', 'disable_set_aibusy', 'cloudflare_link', 'tts_model',
+                         'generating_image', 'bit_8_available', 'host', 'hascuda', 'usegpu', 'rng_states', 'comregex_ai', 'comregex_ui', 'git_repository', 'git_branch']
     settings_name = "system"
     def __init__(self, socketio, koboldai_var):
         self._socketio = socketio
@@ -1300,7 +1288,6 @@ class system_settings(settings):
         self.host        = False
         self.flaskwebgui = False
         self.quiet       = False # If set will suppress any story text from being printed to the console (will only be seen on the client web page)
-        self.use_colab_tpu  = os.environ.get("COLAB_TPU_ADDR", "") != "" or os.environ.get("TPU_NAME", "") != ""  # Whether or not we're in a Colab TPU instance or Kaggle TPU instance and are going to use the TPU rather than the CPU
         self.aria2_port  = 6799 #Specify the port on which aria2's RPC interface will be open if aria2 is installed (defaults to 6799)
         self.standalone = False
         self.api_tokenizer_id = None
@@ -1321,15 +1308,6 @@ class system_settings(settings):
         self.disable_output_formatting = False
         self.api_tokenizer_id = None
         self.port = 5000
-        self.colab_arg = False
-        try:
-            import google.colab
-            self.on_colab = True
-        except:
-            self.on_colab = self.colab_arg
-        print(f"Colab Check: {self.on_colab}, TPU: {self.use_colab_tpu}")
-        self.horde_share = False
-        self._horde_pid = None
         self.generating_image = False #The current status of image generation
         self.image_pipeline = None
         self.summarizer = None
@@ -1381,44 +1359,6 @@ class system_settings(settings):
                 logger.debug("Calcing AI Text from setting alt_gen")
                 self._koboldai_var.calc_ai_text()
             
-            if name == 'horde_share':
-                if self.on_colab is True:
-                    return
-                if not os.path.exists("./AI-Horde-Worker"):
-                    return
-                if value is True:
-                    if self._horde_pid is None:
-                        self._horde_pid = "Pending" # Hack to make sure we don't launch twice while it loads
-                        logger.info("Starting Horde bridge")
-                        logger.debug("Clearing command line args in sys.argv before AI Horde Scribe load")
-                        sys_arg_bkp = sys.argv.copy()
-                        sys.argv = sys.argv[:1]
-                        bd_module = importlib.import_module("AI-Horde-Worker.worker.bridge_data.scribe")
-                        bridge_data = bd_module.KoboldAIBridgeData()
-                        sys.argv = sys_arg_bkp
-                        bridge_data.reload_data()
-                        bridge_data.kai_url = f'http://127.0.0.1:{self.port}'
-                        bridge_data.horde_url = self._koboldai_var.horde_url
-                        bridge_data.api_key = self._koboldai_var.horde_api_key
-                        bridge_data.scribe_name = self._koboldai_var.horde_worker_name
-                        bridge_data.max_length = self._koboldai_var.genamt
-                        bridge_data.max_context_length = self._koboldai_var.max_length
-                        bridge_data.disable_terminal_ui = self._koboldai_var.host
-                        if bridge_data.worker_name == "My Awesome Instance":
-                            bridge_data.worker_name = f"KoboldAI UI Instance #{random.randint(-100000000, 100000000)}"
-                        worker_module = importlib.import_module("AI-Horde-Worker.worker.workers.scribe")
-                        self._horde_pid = worker_module.ScribeWorker(bridge_data)
-                        new_thread = threading.Thread(target=self._horde_pid.start)
-                        new_thread.daemon = True
-                        new_thread.start()
-
-                else:
-                    if self._horde_pid is not None:
-                        logger.info("Killing Horde bridge")
-                        self._horde_pid.stop()
-                        self._horde_pid = None
-
-                
 class KoboldStoryRegister(object):
     def __init__(self, socketio, story_settings, koboldai_vars, tokenizer=None, sequence=[]):
         self._socketio = socketio

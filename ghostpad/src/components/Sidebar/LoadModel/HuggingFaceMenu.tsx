@@ -119,7 +119,7 @@ export const HuggingFaceMenu = () => {
                           label: "Load custom model from Hugging Face",
                           name: "customhuggingface",
                           plugin: "Huggingface",
-                          valid_backends: ["Huggingface", "Basic Huggingface"],
+                          valid_backends: ["Huggingface"],
                         });
                       }
                     }}

@@ -281,6 +281,11 @@ const ModelSettings = () => {
             title="Shows tokens as they are generated."
             varName="user_output_streaming"
           />
+          <VarToggle
+            label="Stop on EOS"
+            title="Fix for EOS tokens followed by nonsense in some Yi models"
+            varName="story_stop_on_eos"
+          />
           {koboldConfig.system?.seed_specified && (
             <VarInput label="Seed" varName="system_seed" type="number" />
           )}
