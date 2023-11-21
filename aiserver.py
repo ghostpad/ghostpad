@@ -61,11 +61,6 @@ import gc
 import traceback
 
 import lupa
-# Hack to make the new Horde worker understand its imports...
-try:
-    sys.path.append(os.path.abspath("AI-Horde-Worker"))
-except:
-    pass
 
 # KoboldAI
 import fileops
@@ -111,16 +106,6 @@ if lupa.LUA_VERSION[:2] != (5, 4):
     logger.error(f"Please install lupa==1.10. You have lupa {lupa.__version__}.")
 
 patch_causallm_patched = False
-
-# Make sure tqdm progress bars display properly in Colab
-from tqdm.auto import tqdm
-old_init = tqdm.__init__
-def new_init(self, *args, **kwargs):
-    old_init(self, *args, **kwargs)
-    if 'ncols' in kwargs:
-        if(self.ncols == 0 and kwargs.get("ncols") != 0):
-            self.ncols = 99
-tqdm.__init__ = new_init
 
 # Add _koboldai_header support for some optional tokenizer fixes
 # This used to be an OPT tokenizer fix, this has been moved search for "# These are model specific overrides if a model has bad defaults" for the new section
@@ -432,8 +417,6 @@ model_menu = {
         MenuModel("GooseAI API (requires API key)", "GooseAI", model_type=MenuModelType.ONLINE_API, model_backend="GooseAI"),
         MenuModel("OpenAI API (requires API key)", "OAI", model_type=MenuModelType.ONLINE_API, model_backend="OpenAI"),
         MenuModel("KoboldAI API", "API", model_type=MenuModelType.ONLINE_API, model_backend="KoboldAI API"),
-        MenuModel("Basic Model API", "Colab", model_type=MenuModelType.ONLINE_API, model_backend="KoboldAI Old Colab Method"),
-        MenuModel("KoboldAI Horde", "CLUSTER", model_type=MenuModelType.ONLINE_API, model_backend="Horde"),
         MenuFolder("Return to Main Menu", "mainmenu"),
     ]
 }
@@ -552,33 +535,6 @@ class ImportBuffer:
         for i in range(len(self.world_infos)):
             for key in ["content", "comment"]:
                 self.world_infos[i][key] = self._replace_placeholders(self.world_infos[i][key])
-
-    def from_club(self, club_id):
-        from importers import aetherroom
-        import_data: aetherroom.ImportData
-        try:
-            import_data = aetherroom.import_scenario(club_id)
-        except aetherroom.RequestFailed as err:
-            status = err.status_code
-            print(f"[import] Got {status} on request to club :^(")
-            message = f"Club responded with {status}"
-            if status == 404:
-                message = f"Prompt not found for ID {club_id}"
-            show_error_notification("Error loading prompt", message)
-            return
-
-        self.prompt = import_data.prompt
-        self.memory = import_data.memory
-        self.authors_note = import_data.authors_note
-        self.notes = import_data.notes
-        self.title = import_data.title
-        self.world_infos = import_data.world_infos
-
-        placeholders = self.extract_placeholders(self.prompt)
-        if not placeholders:
-            self.commit()
-        else:
-            self.request_client_configuration(placeholders)
 
     def commit(self):
         # Push buffer story to actual story
@@ -1248,11 +1204,6 @@ def loadsettings():
         
 def processsettings(js):
 # Copy file contents to vars
-    if("apikey" in js):
-        # If the model is the HORDE, then previously saved API key in settings
-        # Will always override a new key set.
-        if koboldai_vars.model != "CLUSTER" or koboldai_vars.apikey == '':
-            koboldai_vars.apikey = js["apikey"]
     if("andepth" in js):
         koboldai_vars.andepth = js["andepth"]
     if("sampler_order" in js):
@@ -1409,18 +1360,7 @@ def spRequest(filename):
     koboldai_vars.sp_length = tensor.shape[-2]
     koboldai_vars.spmeta["n_tokens"] = koboldai_vars.sp_length
 
-    if(koboldai_vars.use_colab_tpu or koboldai_vars.model in ("TPUMeshTransformerGPTJ", "TPUMeshTransformerGPTNeoX")):
-        rows = tensor.shape[0]
-        padding_amount = tpu_mtj_backend.params["seq"] - (tpu_mtj_backend.params["seq"] % -tpu_mtj_backend.params["cores_per_replica"]) - rows
-        tensor = np.pad(tensor, ((0, padding_amount), (0, 0)))
-        tensor = tensor.reshape(
-            tpu_mtj_backend.params["cores_per_replica"],
-            -1,
-            tpu_mtj_backend.params.get("d_embed", tpu_mtj_backend.params["d_model"]),
-        )
-        koboldai_vars.sp = tpu_mtj_backend.shard_xmap(np.float32(tensor))
-    else:
-        koboldai_vars.sp = torch.from_numpy(tensor)
+    koboldai_vars.sp = torch.from_numpy(tensor)
 
     koboldai_vars.spfilename = filename
     settingschanged()
@@ -1460,14 +1400,12 @@ def general_startup(override_args=None):
     parser.add_argument("--model_parameters", action="store", default="", help="json of id values to use for the input to the model loading process (set to help to get required parameters)")
     parser.add_argument("--path", help="Specify the Path for local models (For model NeoCustom or GPT2Custom)")
     parser.add_argument("--apikey", help="Specify the API key to use for online services")
-    parser.add_argument("--sh_apikey", help="Specify the API key to use for txt2img from the Stable Horde. Get a key from https://horde.koboldai.net/register")
     parser.add_argument("--req_model", type=str, action='append', required=False, help="Which models which we allow to generate for us during cluster mode. Can be specified multiple times.")
     parser.add_argument("--revision", help="Specify the model revision for huggingface models (can be a git branch/tag name or a git commit hash)")
     parser.add_argument("--cpu", action='store_true', help="By default unattended launches are on the GPU use this option to force CPU usage.")
     parser.add_argument("--override_delete", action='store_true', help="Deleting stories from inside the browser is disabled if you are using --remote and enabled otherwise. Using this option will instead allow deleting stories if using --remote and prevent deleting stories otherwise.")
     parser.add_argument("--override_rename", action='store_true', help="Renaming stories from inside the browser is disabled if you are using --remote and enabled otherwise. Using this option will instead allow renaming stories if using --remote and prevent renaming stories otherwise.")
     parser.add_argument("--configname", help="Force a fixed configuration name to aid with config management.")
-    parser.add_argument("--colab", action='store_true', help="Optimize for Google Colab.")
     parser.add_argument("--nobreakmodel", action='store_true', help="Disables Breakmodel support completely.")
     parser.add_argument("--unblock", action='store_true', default=False, help="Unblocks the KoboldAI port to be accessible from other machines without optimizing for remote play (It is recommended to use --host instead)")
     parser.add_argument("--quiet", action='store_true', default=False, help="If present will suppress any story related text from showing on the console")
@@ -1551,23 +1489,6 @@ def general_startup(override_args=None):
     koboldai_vars.revision = args.revision
     koboldai_settings.multi_story = args.multi_story
 
-    if args.apikey:
-        koboldai_vars.apikey = args.apikey
-        koboldai_vars.horde_api_key = args.apikey
-    if args.sh_apikey:
-        koboldai_vars.horde_api_key = args.sh_apikey
-    if args.req_model:
-        koboldai_vars.cluster_requested_models = args.req_model
-
-    if args.colab:
-        args.remote = True;
-        args.override_rename = True;
-        args.override_delete = True;
-        args.quiet = True;
-        args.lowmem = True;
-        args.noaimenu = True;
-        koboldai_vars.colab_arg = True;
-
     if args.quiet:
         koboldai_vars.quiet = True
 
@@ -1612,7 +1533,6 @@ def general_startup(override_args=None):
 
     if args.cpu:
         os.environ['CUDA_VISIBLE_DEVICES'] = "None"
-        koboldai_vars.use_colab_tpu = False
         koboldai_vars.hascuda = False
         koboldai_vars.usegpu = False
         model_backends['Huggingface'].nobreakmodel = True
@@ -1636,16 +1556,11 @@ def general_startup(override_args=None):
         logger.message(f"You have selected the following Model: {args.model}")
         if args.path:
             logger.message(f"You have selected the following path for your Model: {args.path}")
-            model_backends["KoboldAI Old Colab Method"].colaburl = args.path + "/request"; # Lets just use the same parameter to keep it simple
             
     #setup socketio relay queue
     koboldai_settings.queue = multiprocessing.Queue()
     
     socketio.start_background_task(socket_io_relay, koboldai_settings.queue, socketio)
-    
-    if koboldai_vars.use_colab_tpu and args.model_backend == "Huggingface":
-         args.model_backend = "Huggingface MTJ"
-         
     
     if args.model:
         # At this point we have to try to load the model through the selected backend
@@ -1657,11 +1572,6 @@ def general_startup(override_args=None):
         ok_to_load = True
         mising_parameters = []
         arg_parameters = json.loads(args.model_parameters.replace("'", "\"")) if args.model_parameters != "" and args.model_parameters.lower() != "help" else {}
-        
-        #If we're on colab we'll set everything to GPU0
-        if args.colab and args.model_backend == 'Huggingface' and koboldai_vars.on_colab:
-            arg_parameters['use_gpu'] = True
-        
         
         for parameter in parameters:
             if parameter['uitype'] != "Valid Display":
@@ -1729,7 +1639,6 @@ def load_model(model_backend, initial_load=False):
     global model_config
 
     koboldai_vars.aibusy = True
-    koboldai_vars.horde_share = False
 
     koboldai_vars.reset_model()
 
@@ -1741,7 +1650,7 @@ def load_model(model_backend, initial_load=False):
         time.sleep(0.1)    
     
     # If transformers model was selected & GPU available, ask to use CPU or GPU
-    if(not koboldai_vars.use_colab_tpu and koboldai_vars.model not in ["InferKit", "Colab", "API", "CLUSTER", "OAI", "GooseAI" , "ReadOnly", "TPUMeshTransformerGPTJ", "TPUMeshTransformerGPTNeoX"]):
+    if(koboldai_vars.model not in ["InferKit", "API", "CLUSTER", "OAI", "GooseAI" , "ReadOnly"]):
         # loadmodelsettings()
         # loadsettings()
         logger.init("GPU support", status="Searching")
@@ -1766,7 +1675,7 @@ def load_model(model_backend, initial_load=False):
     with use_custom_unpickler(RestrictedUnpickler):
         model = model_backends[model_backend]
         koboldai_vars.supported_gen_modes = [x.value for x in model.get_supported_gen_modes()]
-        model.load(initial_load=initial_load, save_model=not (args.colab or args.cacheonly) or args.savemodel)
+        model.load(initial_load=initial_load, save_model=not args.cacheonly or args.savemodel)
 
     koboldai_vars.model = model.model_name if "model_name" in vars(model) else model.id #Should have model_name, but it could be set to id depending on how it's setup
     if koboldai_vars.model in ("NeoCustom", "GPT2Custom", "TPUMeshTransformerGPTJ", "TPUMeshTransformerGPTNeoX"):
@@ -2459,9 +2368,9 @@ def lua_set_chunk(k, v):
 def lua_get_modeltype():
     if(koboldai_vars.noai):
         return "readonly"
-    if(koboldai_vars.model in ("Colab", "API", "CLUSTER", "OAI", "InferKit")):
+    if(koboldai_vars.model in ("API", "CLUSTER", "OAI", "InferKit")):
         return "api"
-    if(not koboldai_vars.use_colab_tpu and koboldai_vars.model not in ("TPUMeshTransformerGPTJ", "TPUMeshTransformerGPTNeoX") and (koboldai_vars.model in ("GPT2Custom", "NeoCustom") or koboldai_vars.model_type in ("gpt2", "gpt_neo", "gptj"))):
+    if(koboldai_vars.model in ("GPT2Custom", "NeoCustom") or koboldai_vars.model_type in ("gpt2", "gpt_neo", "gptj")):
         hidden_size = get_hidden_size_from_model(model)
     if(koboldai_vars.model in ("gpt2",) or (koboldai_vars.model_type == "gpt2" and hidden_size == 768)):
         return "gpt2"
@@ -2477,7 +2386,7 @@ def lua_get_modeltype():
         return "gpt-neo-1.3B"
     if(koboldai_vars.model in ("EleutherAI/gpt-neo-2.7B",) or (koboldai_vars.model_type == "gpt_neo" and hidden_size == 2560)):
         return "gpt-neo-2.7B"
-    if(koboldai_vars.model in ("EleutherAI/gpt-j-6B",) or ((koboldai_vars.use_colab_tpu or koboldai_vars.model == "TPUMeshTransformerGPTJ") and tpu_mtj_backend.params["d_model"] == 4096) or (koboldai_vars.model_type in ("gpt_neo", "gptj") and hidden_size == 4096)):
+    if(koboldai_vars.model in ("EleutherAI/gpt-j-6B",) or (koboldai_vars.model_type in ("gpt_neo", "gptj") and hidden_size == 4096)):
         return "gpt-j-6B"
     return "unknown"
 
@@ -2488,10 +2397,8 @@ def lua_get_modeltype():
 def lua_get_modelbackend():
     if(koboldai_vars.noai):
         return "readonly"
-    if(koboldai_vars.model in ("Colab", "API", "CLUSTER", "OAI", "InferKit")):
+    if(koboldai_vars.model in ("API", "CLUSTER", "OAI", "InferKit")):
         return "api"
-    if(koboldai_vars.use_colab_tpu or koboldai_vars.model in ("TPUMeshTransformerGPTJ", "TPUMeshTransformerGPTNeoX")):
-        return "mtj"
     return "transformers"
 
 #==================================================================#
@@ -2585,8 +2492,6 @@ def do_connect(_):
     if request.args.get("rely") == "true":
         return
     logger.info("Client connected! UI_{}".format(request.args.get('ui')))
-    #If this we have a message to send to the users and they haven't seen it we'll transmit it now
-    eventlet.spawn(send_one_time_messages, '', wait_time=1)
     
     join_room("UI_{}".format(request.args.get('ui')))
     if 'story' not in session:
@@ -2893,8 +2798,6 @@ def get_message(msg):
         emit('from_server', {'cmd': 'wiconstantoff', 'data': msg['data']}, broadcast=True, room="UI_1")
     elif(msg['cmd'] == 'sendwilist'):
         commitwi(msg['data'])
-    elif(msg['cmd'] == 'aidgimport'):
-        importAidgRequest(msg['data'])
     elif(msg['cmd'] == 'saveasrequest'):
         saveas(msg['data'])
     elif(msg['cmd'] == 'saverequest'):
@@ -2958,7 +2861,6 @@ def get_message(msg):
             f = open(filename, "w")
             f.write(str(msg['gpu_layers']) + '\n' + str(msg['disk_layers']))
             f.close()
-        koboldai_vars.colaburl = msg['url'] + "/request"
         koboldai_vars.model = koboldai_vars.model_selected
         if koboldai_vars.model == "CLUSTER":
             if type(msg['online_model']) is not list:
@@ -3260,39 +3162,6 @@ def actionsubmit(
     while(True):
         set_aibusy(1)
         koboldai_vars.actions.clear_unused_options()
-        if(koboldai_vars.model in ["API","CLUSTER"]):
-            global tokenizer
-            if koboldai_vars.model == "API":
-                tokenizer_id = requests.get(
-                    koboldai_vars.colaburl[:-8] + "/api/v1/model",
-                ).json()["result"]
-            elif len(koboldai_vars.cluster_requested_models) >= 1:
-                # If the player has requested one or more models, we use the first one for the tokenizer
-                tokenizer_id = koboldai_vars.cluster_requested_models[0]
-            # The cluster can return any number of possible models for each gen, but this happens after this step
-            # So at this point, this is unknown
-            else:
-                tokenizer_id = ""
-            if tokenizer_id != koboldai_vars.api_tokenizer_id:
-                try:
-                    if(os.path.isdir(tokenizer_id)):
-                        try:
-                            tokenizer = AutoTokenizer.from_pretrained(tokenizer_id, revision=koboldai_vars.revision, cache_dir="cache", use_fast=False)
-                        except:
-                            tokenizer = AutoTokenizer.from_pretrained(tokenizer_id, revision=koboldai_vars.revision, cache_dir="cache")
-                    elif(os.path.isdir("models/{}".format(tokenizer_id.replace('/', '_')))):
-                        try:
-                            tokenizer = AutoTokenizer.from_pretrained("models/{}".format(tokenizer_id.replace('/', '_')), revision=koboldai_vars.revision, cache_dir="cache", use_fast=False)
-                        except:
-                            tokenizer = AutoTokenizer.from_pretrained("models/{}".format(tokenizer_id.replace('/', '_')), revision=koboldai_vars.revision, cache_dir="cache")
-                    else:
-                        try:
-                            tokenizer = AutoTokenizer.from_pretrained(tokenizer_id, revision=koboldai_vars.revision, cache_dir="cache", use_fast=False)
-                        except:
-                            tokenizer = AutoTokenizer.from_pretrained(tokenizer_id, revision=koboldai_vars.revision, cache_dir="cache")
-                except:
-                    logger.warning(f"Unknown tokenizer {repr(tokenizer_id)}")
-                koboldai_vars.api_tokenizer_id = tokenizer_id
 
         if(disable_recentrng):
             koboldai_vars.recentrng = koboldai_vars.recentrngm = None
@@ -3306,7 +3175,9 @@ def actionsubmit(
             data = data.strip().lstrip('>')
             data = re.sub(r'\n+', ' ', data)
             if(len(data)):
-                data = f"\n\n> {data}\n"
+                data = f"> {data}\n"
+                if(koboldai_vars.gamestarted):
+                    data = "\n\n" + data
         
         # "Chat" mode
         if(koboldai_vars.chatmode):
@@ -3316,8 +3187,9 @@ def actionsubmit(
                 botname = ""
             data = re.sub(r'\n+\Z', '', data)
             if(len(data)):
-                data = f"\n{koboldai_vars.chatname}: {data}\n{botname}"
-        
+                data = f"{koboldai_vars.chatname}: {data}\n{botname}"
+                if (koboldai_vars.gamestarted):
+                    data = "\n" + data
         # If we're not continuing, store a copy of the raw input
         if(data != ""):
             koboldai_vars.lastact = data
@@ -3570,10 +3442,7 @@ def apiactionsubmit(data, use_memory=False, use_world_info=False, use_story=Fals
     minimum = len(tokens) + 1
     maximum = len(tokens) + koboldai_vars.genamt
 
-    if(not koboldai_vars.use_colab_tpu and koboldai_vars.model not in ["Colab", "API", "CLUSTER", "OAI", "TPUMeshTransformerGPTJ", "TPUMeshTransformerGPTNeoX"]):
-        genout = apiactionsubmit_generate(tokens, minimum, maximum)
-    elif(koboldai_vars.use_colab_tpu or koboldai_vars.model in ("TPUMeshTransformerGPTJ", "TPUMeshTransformerGPTNeoX")):
-        genout = apiactionsubmit_tpumtjgenerate(tokens, minimum, maximum)
+    genout = apiactionsubmit_generate(tokens, minimum, maximum)
 
     return genout
 
@@ -3700,7 +3569,7 @@ def calcsubmitbudget(actionlen, winfo, mem, anotetxt, actions, submission=None, 
 
     if(actionlen == 0):
         # First/Prompt action
-        tokens = (tokenizer._koboldai_header if koboldai_vars.model not in ("Colab", "API", "CLUSTER", "OAI") else []) + memtokens + witokens + anotetkns + prompttkns
+        tokens = tokenizer._koboldai_header + memtokens + witokens + anotetkns + prompttkns
         assert len(tokens) <= koboldai_vars.max_length - lnsp - koboldai_vars.genamt - budget_deduction
         ln = len(tokens) + lnsp
         return tokens, ln+1, ln+koboldai_vars.genamt
@@ -3749,12 +3618,12 @@ def calcsubmitbudget(actionlen, winfo, mem, anotetxt, actions, submission=None, 
         # Did we get to add the A.N.? If not, do it here
         if(anotetxt != ""):
             if((not anoteadded) or forceanote):
-                tokens = (tokenizer._koboldai_header if koboldai_vars.model not in ("Colab", "API", "CLUSTER", "OAI") else []) + memtokens + witokens + anotetkns + prompttkns + tokens
+                tokens = tokenizer._koboldai_header + memtokens + witokens + anotetkns + prompttkns + tokens
             else:
-                tokens = (tokenizer._koboldai_header if koboldai_vars.model not in ("Colab", "API", "CLUSTER", "OAI") else []) + memtokens + witokens + prompttkns + tokens
+                tokens = tokenizer._koboldai_header + memtokens + witokens + prompttkns + tokens
         else:
             # Prepend Memory, WI, and Prompt before action tokens
-            tokens = (tokenizer._koboldai_header if koboldai_vars.model not in ("Colab", "API", "CLUSTER", "OAI") else []) + memtokens + witokens + prompttkns + tokens
+            tokens = tokenizer._koboldai_header + memtokens + witokens + prompttkns + tokens
 
         # Send completed bundle to generator
         assert len(tokens) <= koboldai_vars.max_length - lnsp - koboldai_vars.genamt - budget_deduction
@@ -3867,9 +3736,6 @@ def calcsubmit(txt, gen_mode=GenerationMode.STANDARD):
         
         # Send it!
         ikrequest(subtxt)
-
-class HordeException(Exception):
-    pass
 
 #==================================================================#
 # Send text to generator and deal with output
@@ -5303,66 +5169,6 @@ def importgame():
         emit('from_server', {'cmd': 'hidegenseqs', 'data': ''}, broadcast=True, room="UI_1")
 
 #==================================================================#
-# Import an aidg.club prompt and start a new game with it.
-#==================================================================#
-def importAidgRequest(id):    
-    exitModes()
-    
-    urlformat = "https://aetherroom.club/api/"
-    req = requests.get(urlformat+id)
-    if(req.status_code == 200):
-        js = req.json()
-        
-        # Import game state
-        
-        koboldai_vars.create_story("")
-        koboldai_vars.gamestarted = True
-        koboldai_vars.prompt      = js["promptContent"]
-        koboldai_vars.memory      = js["memory"]
-        koboldai_vars.authornote  = js["authorsNote"]
-        
-        
-        if not koboldai_vars.memory:
-            koboldai_vars.memory = ""
-        if not koboldai_vars.authornote:
-            koboldai_vars.authornote = ""
-        
-        num = 0
-        for wi in js["worldInfos"]:
-            koboldai_vars.worldinfo.append({
-                "key": wi["keys"],
-                "keysecondary": wi.get("keysecondary", ""),
-                "content": wi["entry"],
-                "comment": wi.get("comment", ""),
-                "folder": wi.get("folder", None),
-                "num": num,
-                "init": True,
-                "selective": wi.get("selective", False),
-                "constant": wi.get("constant", False),
-                "uid": None,
-            })
-            
-            koboldai_vars.worldinfo_v2.add_item([x.strip() for x in wi["keys"].split(",")][0], wi["keys"], wi.get("keysecondary", ""), 
-                                                wi.get("folder", "root"), wi.get("constant", False), 
-                                                wi["entry"], wi.get("comment", ""))
-                                                
-            
-
-        # Reset current save
-        koboldai_vars.savedir = getcwd()+"\\stories"
-        
-        # Refresh game screen
-        koboldai_vars.laststory = None
-        emit('from_server', {'cmd': 'setstoryname', 'data': koboldai_vars.laststory}, broadcast=True, room="UI_1")
-        setgamesaved(False)
-        sendwi()
-        emit('from_server', {'cmd': 'setmemory', 'data': koboldai_vars.memory}, broadcast=True, room="UI_1")
-        emit('from_server', {'cmd': 'setanote', 'data': koboldai_vars.authornote}, broadcast=True, room="UI_1")
-        emit('from_server', {'cmd': 'setanotetemplate', 'data': koboldai_vars.authornotetemplate}, broadcast=True, room="UI_1")
-        refresh_story()
-        emit('from_server', {'cmd': 'setgamestate', 'data': 'ready'}, broadcast=True, room="UI_1")
-
-#==================================================================#
 #  Import World Info JSON file
 #==================================================================#
 def wiimportrequest():
@@ -5504,7 +5310,7 @@ def send_debug():
     if koboldai_vars.debug:
         debug_info = ""
         try:
-            debug_info = "{}Seed: {} ({})\n".format(debug_info, repr(__import__("tpu_mtj_backend").get_rng_seed() if koboldai_vars.use_colab_tpu else __import__("torch").initial_seed()), "specified by user in settings file" if koboldai_vars.seed_specified else "randomly generated")
+            debug_info = "{}Seed: {} ({})\n".format(debug_info, repr(__import__("torch").initial_seed()), "specified by user in settings file" if koboldai_vars.seed_specified else "randomly generated")
         except:
             pass
         try:
@@ -5763,7 +5569,6 @@ def new_ui_index():
     return render_template(
         'index_new.html',
         settings=gensettings.gensettingstf,
-        on_colab=koboldai_vars.on_colab,
         hide_ai_menu=args.noaimenu
     )
 
@@ -6221,17 +6026,11 @@ def UI_2_var_change(data):
 def set_seed():
     print("Setting Seed")
     if(koboldai_vars.seed is not None):
-        if(koboldai_vars.use_colab_tpu):
-            if(koboldai_vars.seed_specified):
-                __import__("tpu_mtj_backend").set_rng_seed(koboldai_vars.seed)
-            else:
-                __import__("tpu_mtj_backend").randomize_rng_seed()
+        if(koboldai_vars.seed_specified):
+            __import__("torch").manual_seed(koboldai_vars.seed)
         else:
-            if(koboldai_vars.seed_specified):
-                __import__("torch").manual_seed(koboldai_vars.seed)
-            else:
-                __import__("torch").seed()
-    koboldai_vars.seed = __import__("tpu_mtj_backend").get_rng_seed() if koboldai_vars.use_colab_tpu else __import__("torch").initial_seed()
+            __import__("torch").seed()
+    koboldai_vars.seed = __import__("torch").initial_seed()
 
 #==================================================================#
 # Saving Story
@@ -6525,7 +6324,6 @@ def UI_2_load_model(data):
     logger.debug("Loading model with user input of: {}".format(data))
     model_backends[data['plugin']].set_input_parameters(data)
     load_model(data['plugin'])
-    #load_model(use_gpu=data['use_gpu'], gpu_layers=data['gpu_layers'], disk_layers=data['disk_layers'], online_model=data['online_model'], url=koboldai_vars.colaburl, use_8_bit=data['use_8_bit'])
 
 #==================================================================#
 # Event triggered when load story is clicked
@@ -7164,20 +6962,6 @@ def UI_2_unload_userscripts(data):
     koboldai_vars.userscripts = [x for x in koboldai_vars.userscripts if x != data]
     load_lua_scripts()
 
-
-
-#==================================================================#
-# Event triggered when aidg.club loaded
-#==================================================================#
-@socketio.on('load_aidg_club')
-@logger.catch
-def UI_2_load_aidg_club(data):
-    if koboldai_vars.debug:
-        print("Load aidg.club: {}".format(data))
-    import_buffer.from_club(data)
-    # importAidgRequest(data) 
-
-
 #==================================================================#
 # Event triggered when Theme Changed
 #==================================================================#
@@ -7319,11 +7103,8 @@ def UI_2_generate_raw():
 #==================================================================#
 @logger.catch
 def UI_2_load_cookies():
-    if koboldai_vars.on_colab:
-        if os.path.exists("./settings/cookies.settings"):
-            with open("./settings/cookies.settings", "r") as f:
-                data = json.load(f)
-                socketio.emit('load_cookies', data, room="UI_2")
+    #todo delete probably
+    pass
 
 #==================================================================#
 # Save New Preset
@@ -7543,22 +7324,12 @@ def generate_image(prompt: str) -> Optional[Image.Image]:
     if koboldai_vars.img_gen_priority == 4:
         # Check if stable-diffusion-webui API option selected and use that if found.
         return text2img_api(prompt)
-    elif ((not koboldai_vars.hascuda or not os.path.exists("functional_models/stable-diffusion/model_index.json")) and koboldai_vars.img_gen_priority != 0) or koboldai_vars.img_gen_priority == 3:
-        # If we don't have a GPU, use horde if we're allowed to
-        return text2img_horde(prompt)
 
     memory = torch.cuda.get_device_properties(0).total_memory
 
-    # We aren't being forced to use horde, so now let's figure out if we should use local
     if memory - torch.cuda.memory_reserved(0) >= 6000000000:
         # We have enough vram, just do it locally
         return text2img_local(prompt)
-    elif memory > 6000000000 and koboldai_vars.img_gen_priority <= 1:
-        # We could do it locally by swapping the model out
-        print("Could do local or online")
-        return text2img_horde(prompt)
-    elif koboldai_vars.img_gen_priority != 0:
-        return text2img_horde(prompt)
 
     raise RuntimeError("Unable to decide image generation backend. Please report this.")
     
@@ -7595,88 +7366,6 @@ def text2img_local(prompt: str) -> Optional[Image.Image]:
     torch.cuda.empty_cache()
     logger.debug("time to unload: {}".format(time.time() - start_time))
     return image
-
-@logger.catch
-def text2img_horde(prompt: str) -> Optional[Image.Image]:
-    logger.debug("Generating Image using Horde")
-    
-    final_submit_dict = {
-        "prompt": prompt,
-        "trusted_workers": False, 
-        "models": [
-          "stable_diffusion"
-        ],
-        "params": {
-            "n": 1,
-            "nsfw": True,
-            "sampler_name": "k_euler_a",
-            "karras": True,
-            "cfg_scale": koboldai_vars.img_gen_cfg_scale,
-            "steps": koboldai_vars.img_gen_steps, 
-            "width": 512, 
-            "height": 512
-        }
-    }
-    client_agent = "KoboldAI:2.0.0:koboldai.org"
-    cluster_headers = {
-        'apikey': koboldai_vars.horde_api_key,
-        "Client-Agent": client_agent
-    }    
-    id_req = requests.post(f"{koboldai_vars.horde_url}/api/v2/generate/async", json=final_submit_dict, headers=cluster_headers)
-
-    if not id_req.ok:
-        if id_req.status_code == 403:
-            show_error_notification(
-                "Stable Horde failure",
-                "Stable Horde is currently not accepting anonymous requuests. " \
-                "Try again in a few minutes or register for priority access at https://horde.koboldai.net",
-                do_log=True
-            )
-            return None
-        logger.error(f"HTTP {id_req.status_code}, expected OK-ish")
-        logger.error(id_req.text)
-        logger.error(f"Response headers: {id_req.headers}")
-        raise HordeException("Image seeding failed. See console for more details.")
-    
-    image_id = id_req.json()["id"]
-
-    while True:
-        poll_req = requests.get(f"{koboldai_vars.horde_url}/api/v2/generate/check/{image_id}")
-        if not poll_req.ok:
-            logger.error(f"HTTP {poll_req.status_code}, expected OK-ish")
-            logger.error(poll_req.text)
-            logger.error(f"Response headers: {poll_req.headers}")
-            raise HordeException("Image polling failed. See console for more details.")
-        poll_j = poll_req.json()
-
-        if poll_j["finished"] > 0:
-            break
-
-        # This should always exist but if it doesn't 2 seems like a safe bet.
-        sleepy_time = int(poll_req.headers.get("retry-after", 2))
-        time.sleep(sleepy_time)
-    
-    # Done generating, we can now fetch it.
-
-    gen_req = requests.get(f"{koboldai_vars.horde_url}/api/v2/generate/status/{image_id}")
-    if not gen_req.ok:
-        logger.error(f"HTTP {gen_req.status_code}, expected OK-ish")
-        logger.error(gen_req.text)
-        logger.error(f"Response headers: {gen_req.headers}")
-        raise HordeException("Image fetching failed. See console for more details.")
-    results = gen_req.json()
-
-    if len(results["generations"]) > 1:
-        logger.warning(f"Got too many generations, discarding extras. Got {len(results['generations'])}, expected 1.")
-    
-    imgurl = results["generations"][0]["img"]
-    try:
-        img_data = requests.get(imgurl, timeout=3).content
-        img = Image.open(BytesIO(img_data))
-        return img
-    except Exception as err:
-        logger.error(f"Error retrieving image: {err}")        
-        raise HordeException("Image fetching failed. See console for more details.")
 
 @logger.catch
 def text2img_api(prompt, art_guide="") -> Image.Image:
@@ -8210,30 +7899,6 @@ def UI_2_action_image():
                  mimetype="image/png")
 
 #==================================================================#
-# display messages if they have never been sent before on this install
-#==================================================================#
-with open("data/one_time_messages.json", "r") as f:
-    messages = json.load(f)
-    messages = {int(x): messages[x] for x in messages}
-@logger.catch
-@socketio.on("check_messages")
-def send_one_time_messages(data, wait_time=0):
-    time.sleep(wait_time) #Need to wait a bit for the web page to load as the connect event is very eary
-    if data != '':
-        if int(data) not in koboldai_vars.seen_messages:
-            koboldai_vars.seen_messages.append(int(data))
-            #Now let's save
-            filename = "settings/system_settings.v2_settings"
-            if not os.path.exists("settings"):
-                os.mkdir("settings")
-            with open(filename, "w") as settings_file:
-                settings_file.write(getattr(koboldai_vars, "_system_settings").to_json())
-    for message in messages:
-        if message not in koboldai_vars.seen_messages:
-            socketio.emit("message", messages[message])
-            break
-
-#==================================================================#
 # Test
 #==================================================================#
 def model_info():
@@ -8528,7 +8193,7 @@ class WorldInfoUIDsSchema(WorldInfoEntriesUIDsSchema):
     folders: List[WorldInfoFolderSchema] = fields.List(fields.Nested(WorldInfoFolderUIDsSchema), required=True)
 
 class ModelSelectionSchema(KoboldSchema):
-    model: str = fields.String(required=True, validate=validate.Regexp(r"^(?!\s*NeoCustom)(?!\s*GPT2Custom)(?!\s*TPUMeshTransformerGPTJ)(?!\s*TPUMeshTransformerGPTNeoX)(?!\s*GooseAI)(?!\s*OAI)(?!\s*InferKit)(?!\s*Colab)(?!\s*API).*$"), metadata={"description": 'Hugging Face model ID, the path to a model folder (relative to the "models" folder in the KoboldAI root folder) or "ReadOnly" for no model'})
+    model: str = fields.String(required=True, validate=validate.Regexp(r"^(?!\s*NeoCustom)(?!\s*GPT2Custom).*$"), metadata={"description": 'Hugging Face model ID, the path to a model folder (relative to the "models" folder in the KoboldAI root folder) or "ReadOnly" for no model'})
     backend: Optional[str] = fields.String(required=False, validate=validate.OneOf(model_backends.keys()))
 
 def _generate_text(body: GenerationInputSchema):
@@ -8537,27 +8202,18 @@ def _generate_text(body: GenerationInputSchema):
             "msg": "Server is busy; please try again later.",
             "type": "service_unavailable",
         }}), mimetype="application/json", status=503))
-    if koboldai_vars.use_colab_tpu:
-        import tpu_mtj_backend
-        tpu_mtj_backend.socketio = socketio
     if hasattr(body, "sampler_seed"):
         # If a seed was specified, we need to save the global RNG state so we
         # can restore it later
         old_seed = koboldai_vars.seed
-        old_rng_state = tpu_mtj_backend.get_rng_state() if koboldai_vars.use_colab_tpu else torch.get_rng_state()
+        old_rng_state = torch.get_rng_state()
         koboldai_vars.seed = body.sampler_seed
         # We should try to use a previously saved RNG state with the same seed
         if body.sampler_seed in koboldai_vars.rng_states:
-            if koboldai_vars.use_colab_tpu:
-                tpu_mtj_backend.set_rng_state(koboldai_vars.rng_states[body.sampler_seed])
-            else:
-                torch.set_rng_state(koboldai_vars.rng_states[body.sampler_seed])
+            torch.set_rng_state(koboldai_vars.rng_states[body.sampler_seed])
         else:
-            if koboldai_vars.use_colab_tpu:
-                tpu_mtj_backend.set_rng_state(tpu_mtj_backend.new_rng_state(body.sampler_seed))
-            else:
-                torch.manual_seed(body.sampler_seed)
-        koboldai_vars.rng_states[body.sampler_seed] = tpu_mtj_backend.get_rng_state() if koboldai_vars.use_colab_tpu else torch.get_rng_state()
+            torch.manual_seed(body.sampler_seed)
+        koboldai_vars.rng_states[body.sampler_seed] = torch.get_rng_state()
     if hasattr(body, "sampler_order"):
         if len(body.sampler_order) < 7:
             body.sampler_order = [6] + body.sampler_order
@@ -8641,10 +8297,7 @@ def _generate_text(body: GenerationInputSchema):
             spRequest(old_spfilename)
         if hasattr(body, "sampler_seed"):
             koboldai_vars.seed = old_seed
-            if koboldai_vars.use_colab_tpu:
-                tpu_mtj_backend.set_rng_state(old_rng_state)
-            else:
-                torch.set_rng_state(old_rng_state)
+            torch.set_rng_state(old_rng_state)
         set_aibusy(0)
     return output
 
@@ -10890,7 +10543,7 @@ def get_config_sampler_seed():
               example:
                 value: 3475097509890965500
     """
-    return {"value": __import__("tpu_mtj_backend").get_rng_seed() if koboldai_vars.use_colab_tpu else __import__("torch").initial_seed()}
+    return {"value": __import__("torch").initial_seed()}
 
 @api_v1.put("/config/sampler_seed")
 @api_schema_wrap
@@ -10915,13 +10568,8 @@ def put_config_sampler_seed(body: SamplerSeedSettingSchema):
               schema: EmptySchema
         {api_validation_error_response}
     """
-    if koboldai_vars.use_colab_tpu:
-        import tpu_mtj_backend
-        tpu_mtj_backend.socketio = socketio
-        tpu_mtj_backend.set_rng_seed(body.value)
-    else:
-        import torch
-        torch.manual_seed(body.value)
+    import torch
+    torch.manual_seed(body.value)
     koboldai_vars.seed = body.value
     return {}
 
@@ -11169,16 +10817,11 @@ def run():
     Session(app)
     logger.init_ok("Flask", status="OK")
     logger.init("Webserver", status="Starting")
-    patch_transformers(use_tpu=koboldai_vars.use_colab_tpu)
+    patch_transformers()
     
     # Start Flask/SocketIO (Blocking, so this must be last method!)
     port = args.port if "port" in args and args.port is not None else 5000
     koboldai_vars.port = port
-
-    # TODO: Top-level tpu_mtj_backend will be removed in modularity PR
-    if koboldai_vars.use_colab_tpu:
-        import tpu_mtj_backend
-        tpu_mtj_backend.socketio = socketio
     
     if(koboldai_vars.host):
         if(args.localtunnel):
@@ -11217,9 +10860,7 @@ def run():
             with open('cloudflare.log', 'w') as cloudflarelog:
                 cloudflarelog.write("KoboldAI is available at the following link : " + cloudflare)
                 logger.init_ok("Webserver", status="OK")
-                if not koboldai_vars.use_colab_tpu and args.model:
-                    # If we're using a TPU our UI will freeze during the connection to the TPU. To prevent this from showing to the user we 
-                    # delay the display of this message until after that step
+                if args.model:
                     logger.message(f"KoboldAI is still loading your model but available at the following link: {cloudflare}")
                     logger.message(f"KoboldAI is still loading your model but available at the following link for the Classic UI: {cloudflare}/classic")
                     logger.message(f"KoboldAI is still loading your model but available at the following link for KoboldAI Lite: {cloudflare}/lite")
@@ -11267,7 +10908,7 @@ else:
     logger.init("Flask", status="Starting")
     Session(app)
     logger.init_ok("Flask", status="OK")
-    patch_transformers(use_tpu=koboldai_vars.use_colab_tpu)
+    patch_transformers()
     startup(command_line_backend)
     koboldai_settings.port = args.port if "port" in args and args.port is not None else 5000
     print("{0}\nServer started in WSGI mode!{1}".format(colors.GREEN, colors.END), flush=True)

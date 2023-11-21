@@ -6,7 +6,6 @@ from aiserver import koboldai_vars
 from modeling.inference_model import InferenceModel
 from modeling.inference_models.api import APIInferenceModel
 from modeling.inference_models.generic_hf_torch import GenericHFTorchInferenceModel
-from modeling.inference_models.horde import HordeInferenceModel
 
 model: InferenceModel
 
@@ -50,24 +49,6 @@ def test_torch_inference() -> None:
     ), f"Faulty full determinism! {x.decoded} vs {y.decoded}"
 
     print(x)
-
-
-# Horde
-def test_horde_load() -> None:
-    global model
-    # TODO: Make this a property and sync it with kaivars
-    koboldai_vars.cluster_requested_models = []
-    model = HordeInferenceModel()
-    model.load()
-
-
-def test_horde_inference() -> None:
-    x = model.raw_generate(TEST_PROMPT, max_new=TEST_GEN_TOKEN_COUNT, seed=TEST_SEED)
-    assert (
-        len(x.encoded[0]) == TEST_GEN_TOKEN_COUNT
-    ), f"Wrong token amount (requested {TEST_GEN_TOKEN_COUNT})"
-    print(x)
-
 
 # API
 def test_api_load() -> None:

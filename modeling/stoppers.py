@@ -120,14 +120,22 @@ class Stoppers:
     ) -> bool:
                 
         data = [model.tokenizer.decode(x) for x in input_ids]
+        extra_options = []
+        if utils.koboldai_vars.stop_on_eos:
+            # Some Yi models will spit out </s> tokens even though the
+            # model's EOS token is <|endoftext|>. This option allows us to
+            # stop on either.
+            extra_options += [model.tokenizer.eos_token, "</s>"]
+
         # null_character = model.tokenizer.encode(chr(0))[0]
         if "completed" not in model.gen_state:
             model.gen_state["completed"] = [False] * len(input_ids)
         if utils.koboldai_vars.adventure:
-            extra_options = [">", "\n>"]
-            for option in extra_options:
-                if option not in utils.koboldai_vars.stop_sequence:
-                    utils.koboldai_vars.stop_sequence.append(option)
+            extra_options += [">", "\n>"]
+
+        for option in extra_options:
+            if option not in utils.koboldai_vars.stop_sequence:
+                utils.koboldai_vars.stop_sequence.append(option)
 
         #one issue is that the stop sequence may not actual align with the end of token 
         #if its a subsection of a longer token

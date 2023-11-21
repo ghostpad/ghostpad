@@ -202,7 +202,8 @@ class model_backend(InferenceModel):
         # actual encoded result we want without the prefix space behavior.
         original_encode = type(self.tokenizer.tokenizer).encode
         def encode_wrapper(self, text, *args, **kwargs):
-            if type(text) is str:
+            comma_result = original_encode(self, ',')
+            if type(text) is str and comma_result[0] == 1919:
                 text = ',' + text
                 result = original_encode(self, text, *args, **kwargs)
                 result = result[1:]

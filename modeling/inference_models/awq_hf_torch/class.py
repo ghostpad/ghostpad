@@ -91,6 +91,7 @@ class model_backend(HFTorchInferenceModel):
 
         self.model = self._get_model(self.get_local_model_path())
         self.tokenizer = self._get_tokenizer(self.get_local_model_path())
+        self.tokenizer.add_bos_token = False
 
         if (
             utils.koboldai_vars.badwordsids is koboldai_settings.badwordsids_default

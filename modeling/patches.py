@@ -328,9 +328,7 @@ class LazyloadPatches:
         return error_msgs, offload_index, state_dict_index
 
 
-def patch_transformers(use_tpu: bool) -> None:
+def patch_transformers() -> None:
     patch_transformers_download()
     patch_transformers_loader()
-
-    if not use_tpu:
-        patch_transformers_generation()
+    patch_transformers_generation()

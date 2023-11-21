@@ -1,14 +1,10 @@
 from __future__ import annotations
 try:
-    import time, json
     import torch
-    import requests
     import numpy as np
     from typing import List, Optional, Union
     import os
-    import glob
     from pathlib import Path
-    import re
     import warnings
     import gc
 
@@ -175,7 +171,8 @@ class model_backend(InferenceModel):
         # actual encoded result we want without the prefix space behavior.
         original_encode = type(self.tokenizer.tokenizer).encode
         def encode_wrapper(self, text, *args, **kwargs):
-            if type(text) is str:
+            comma_result = original_encode(self, ',')
+            if type(text) is str and comma_result[0] == 1919:
                 text = ',' + text
                 result = original_encode(self, text, *args, **kwargs)
                 result = result[1:]
@@ -290,7 +287,8 @@ class model_backend(InferenceModel):
             for i in range(max_new):
                 logits = self.model.forward(self.generator.sequence_ids[:, -1:], self.generator.cache)
                 for bad_word_id in bad_words_ids:
-                    logits[:, :, bad_word_id] = -10000.0
+                    if bad_word_id < logits.shape[-1]:
+                        logits[:, :, bad_word_id] = -10000.0
 
                 logits = torch.unsqueeze(logits[0, -1, :], 0)
 
