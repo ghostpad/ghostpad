@@ -40,7 +40,7 @@ class model_backend(HFTorchInferenceModel):
         self.disable = load_failed
 
     def is_valid(self, model_name, model_path, menu_path):
-        return True
+        return super().is_valid(model_name, model_path, menu_path) and not self.disable
 
     def _load(self, save_model: bool, initial_load: bool) -> None:
         try:

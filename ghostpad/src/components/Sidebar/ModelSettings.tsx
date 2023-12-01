@@ -204,6 +204,60 @@ const ModelSettings = () => {
       </div>
       <div className="collapse collapse-arrow border border-neutral bg-base-200 rounded-box mt-4">
         <input type="checkbox" defaultChecked />
+        <div className="collapse-title h-8 text-md">Llama.cpp</div>
+        <div className="collapse-content flex flex-row flex-wrap justify-center gp-range-group">
+          <VarRange
+            label="Min P Sampling"
+            varName="model_min_p"
+            min={0}
+            max={1}
+            step={0.01}
+            title="Alternative to Top P / Top K, only compatible with llama.cpp"
+          />
+          <VarRange
+            label="Mirostat Mode"
+            varName="model_mirostat_mode"
+            min={0}
+            max={2}
+            step={1}
+            title="0 = Disabled, 1 = Mirostat, 2 = Mirostat 2.0. Llama.cpp only."
+          />
+          <VarRange
+            label="Mirostat Tau"
+            varName="model_mirostat_tau"
+            min={0}
+            max={6}
+            step={0.01}
+            title=""
+          />
+          <VarRange
+            label="Mirostat ETA"
+            varName="model_mirostat_eta"
+            min={0}
+            max={1}
+            step={0.01}
+            title="0 = Disabled, 1 = Mirostat, 2 = Mirostat 2.0. Llama.cpp only."
+          />
+          <VarRange
+            label="Frequency Penalty"
+            varName="model_freq_pen"
+            min={0}
+            max={3}
+            step={0.01}
+            title="The penalty to apply to tokens based on their frequency in the prompt. Llama.cpp only."
+          />
+          <VarRange
+            label="Presence Penalty"
+            varName="model_presence_pen"
+            min={0}
+            max={3}
+            step={0.01}
+            title="The penalty to apply to tokens based on their presence in the prompt."
+          />
+        </div>
+      </div>
+      <div className="collapse collapse-arrow border border-neutral bg-base-200 rounded-box mt-4">
+        <input type="checkbox" defaultChecked />
         <div className="collapse-title h-8 text-md">Repetition</div>
         <div className="collapse-content flex flex-row flex-wrap justify-center gp-range-group">
           <VarRange
@@ -284,7 +338,7 @@ const ModelSettings = () => {
           <VarToggle
             label="Stop on EOS"
             title="Fix for EOS tokens followed by nonsense in some Yi models"
-            varName="story_stop_on_eos"
+            varName="user_stop_on_eos"
           />
           {koboldConfig.system?.seed_specified && (
             <VarInput label="Seed" varName="system_seed" type="number" />
