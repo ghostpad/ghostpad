@@ -10880,7 +10880,7 @@ def run():
             if not args.no_ui:
                 try:
                     import webbrowser
-                    webbrowser.open_new('http://localhost:{0}'.format(port))
+                    webbrowser.open_new('http://127.0.0.1:{0}'.format(port))
                 except:
                     pass
             logger.init_ok("Webserver", status="OK")
@@ -10891,7 +10891,7 @@ def run():
             if not args.no_ui:
                 try:
                     import webbrowser
-                    webbrowser.open_new('http://localhost:{0}'.format(port))
+                    webbrowser.open_new('http://127.0.0.1:{0}'.format(port))
                 except:
                     pass
             logger.init_ok("Webserver", status="OK")

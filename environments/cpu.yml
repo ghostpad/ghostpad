@@ -1,5 +1,6 @@
 name: koboldai
 channels:
+  - pytorch
   - conda-forge
   - defaults
 dependencies:
@@ -8,7 +9,8 @@ dependencies:
   - flask-socketio=5.3.2
   - flask-session=0.5.0
   - python-socketio=5.7.2
-  - python=3.8.*
+  - pytorch=2.0.*
+  - python=3.10.*
   - eventlet=0.33.3
   - dnspython=2.2.1
   - markdown
@@ -24,19 +26,18 @@ dependencies:
   - psutil
   - ffmpeg
   - pip:
-    - --extra-index-url https://download.pytorch.org/whl/rocm5.2
-    - torch==1.13.1+rocm5.2
     - flask-cloudflared==0.0.10
     - flask-ngrok
     - flask-cors
     - lupa==2.0
-    - transformers[sentencepiece]==4.34.0
+    - transformers[sentencepiece]==4.35.2
     - Werkzeug==2.3.7
     - huggingface_hub==0.16.4
     - optimum[onnxruntime]==1.13.2
     - safetensors==0.3.3
     - accelerate==0.21.0
     - git+https://github.com/VE-FORBRYDERNE/mkultra
+    - flask-session
     - ansi2html
     - flask_compress
     - ijson
@@ -46,9 +47,13 @@ dependencies:
     - git+https://github.com/0cc4m/hf_bleeding_edge/
     - einops
     - peft==0.3.0
+    - scipy
     - windows-curses; sys_platform == 'win32'
     - pynvml
-    - https://github.com/PanQiWei/AutoGPTQ/releases/download/v0.4.2/auto_gptq-0.4.2+rocm5.4.2-cp310-cp310-linux_x86_64.whl
+    - xformers==0.0.21
     - omegaconf
     - https://github.com/jllllll/llama-cpp-python-cuBLAS-wheels/releases/download/cpu/llama_cpp_python-0.2.20+cpuavx-cp310-cp310-manylinux_2_31_x86_64.whl; sys_platform == "linux" and platform_machine == "x86_64" and python_version == "3.10"
     - https://github.com/jllllll/llama-cpp-python-cuBLAS-wheels/releases/download/cpu/llama_cpp_python-0.2.20+cpuavx-cp310-cp310-win_amd64.whl; sys_platform == "win32" and python_version == "3.10"
+    - https://github.com/jllllll/llama-cpp-python-cuBLAS-wheels/releases/download/metal/llama_cpp_python-0.2.20-cp310-cp310-macosx_14_0_arm64.whl; sys_platform == "darwin" and python_version == "3.10"
+
+

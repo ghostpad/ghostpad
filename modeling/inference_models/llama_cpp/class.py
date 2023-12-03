@@ -88,6 +88,8 @@ class model_backend(InferenceModel):
             model_path=self.model_file,
             n_ctx=utils.koboldai_vars.max_length,
             n_batch=utils.koboldai_vars.max_length,
+            use_mlock=True,
+            use_mmap=False
         )
 
         return model
