@@ -139,7 +139,7 @@ class model_backend(InferenceModel):
                     outputs.append("")
                 outputs[idx] += out["text"]
             tokens = [self.tokenizer.encode(choice) for choice in outputs]
-            if (self._stopper(tokens[0], None)):
+            if (len(tokens[0]) and self._stopper(tokens[0], None)):
                 break
             self._post_token_gen(tokens)
 
