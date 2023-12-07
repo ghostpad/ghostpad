@@ -77,10 +77,11 @@ function useChatnamesFormatter(
       return;
     }
 
-    return editor.registerNodeTransform(
+    const cleanupNodeTransform = editor.registerNodeTransform(
       TextNode,
       textNodeTransform(koboldConfig)
     );
+    return cleanupNodeTransform;
   }, [
     editor,
     koboldConfig.story?.chatmode,

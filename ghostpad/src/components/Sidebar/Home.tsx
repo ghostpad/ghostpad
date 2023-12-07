@@ -81,8 +81,8 @@ const MainMenu = () => {
       </ul>
       {koboldConfig.story?.storymode === 2 && (
         <div className="p-6">
-          <VarInput varName="story_chatname" label="User Name" />
-          <VarInput varName="story_botname" label="Bot Name" />
+          <VarInput varName="story_chatname" label="User Name" syncOnBlur />
+          <VarInput varName="story_botname" label="Bot Name" syncOnBlur />
         </div>
       )}
 
