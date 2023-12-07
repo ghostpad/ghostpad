@@ -11,7 +11,11 @@ Ghostpad builds upon [KoboldAI](https://github.com/KoboldAI/KoboldAI-Client) to 
 - A library for your world info and text. Individual memories, author's notes, and world info entries can be saved. These can then be combined together, allowing for a "building block" style experience when designing scenarios and characters.
 - AutoAWQ and Llama.cpp support
 
-https://github.com/ghostpad/ghostpad/assets/1075900/2c16470e-8817-4829-80a9-02a3fdd7bfd2
+
+
+
+https://github.com/ghostpad/ghostpad/assets/1075900/18e31eab-0292-4c34-8d10-93a462ddcf56
+
 
 
 ### Installation
@@ -53,7 +57,7 @@ Upon running the appropriate play script, you can open [http://localhost:5000](h
 
 ### Voice Chat On Remote Hosts
 
-Let's say you have two PCs, you are running Ghostpad on PC 1, and you want to use voice chat over your local network on PC 2. You will need to open `chrome://flags` and search for `Insecure origins treated as secure`, then add PC 1's URL here. This allows it to use your microphone without using https.
+Let's say you have two PCs, you are running Ghostpad on PC 1, and you want to use voice chat over your local network on PC 2. You will need to open `chrome://flags` on PC 2 and search for `Insecure origins treated as secure`, then add PC 1's URL here. This allows it to use your microphone without using https.
 
 ### Misc Demo Videos
 
