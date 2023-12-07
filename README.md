@@ -11,7 +11,7 @@ Ghostpad builds upon [KoboldAI](https://github.com/KoboldAI/KoboldAI-Client) to 
 - Real time edits. Instead of syncing with the server when you defocus the text editor, your changes always take effect immediately.
 - WPP to text. If you've ever designed a character using the WPP format and wanted to combine it with plain text, you can now do this with the "Insert WPP in Text" button.
 - Hugging Face search
-- AutoAWQ support
+- AutoAWQ and Llama.cpp support
 
 
 
