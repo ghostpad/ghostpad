@@ -173,7 +173,7 @@ export default function Ghostpad() {
               crossOrigin=""
             />
             <link
-              href={`https://fonts.googleapis.com/css2?family=${ghostpadConfig.editorGoogleFont.linkFamily}&display=swap`}
+              href={`https://fonts.googleapis.com/css2?family=${ghostpadConfig.editorGoogleFont.linkFamily}:wght@400;700&&display=swap`}
               rel="stylesheet"
             />
           </>
