@@ -13,12 +13,38 @@ Ghostpad builds upon [KoboldAI](https://github.com/KoboldAI/KoboldAI-Client) to 
 - Hugging Face search
 - AutoAWQ support
 
-https://github.com/ghostpad/ghostpad/assets/1075900/273034da-05f3-4652-aad0-78ef2399d310
+
+
+https://github.com/ghostpad/ghostpad/assets/1075900/2c16470e-8817-4829-80a9-02a3fdd7bfd2
+
 
 ### Installation
-1. Follow the [KoboldAI installation instructions](https://github.com/henk717/KoboldAI#install-koboldai-on-your-own-computer).
+**Windows (NVidia GPU)**
+- Install version 11.8 of the CUDA Toolkit (https://developer.nvidia.com/cuda-11-8-0-download-archive)
+- Clone the URL of the Github repository (git clone https://github.com/ghostpad/ghostpad.git)
+- Open install_requirements.bat as administrator.
+- Choose option 1 to use a temporary drive.
+- Once this is complete, run `play.bat`
 
-2. Open [http://localhost:5000](http://localhost:5000) in your browser.  You can access KoboldAI UI2 through http://localhost:5000/new_ui and UI1 through http://localhost:5000/classic
+**Windows (CPU)**
+- Clone the URL of the Github repository (git clone https://github.com/ghostpad/ghostpad.git)
+- Open install_requirements_cpu.bat as administrator.
+- Choose option 1 to use a temporary drive.
+- Once this is complete, run `play.bat`
+
+**Linux**
+- Clone the URL of the Github repository (git clone https://github.com/ghostpad/ghostpad.git)
+- *Using CPU only?* Run play-cpu.sh
+- *NVidia user?* Run play.sh
+- *AMD user? Make sure ROCm is installed.* Run play-rocm.sh
+- *Intel ARC user? Make sure OneAPI is installed.* Run play-ipex.sh
+
+**MacOS**
+- Clone the URL of the Github repository (git clone https://github.com/ghostpad/ghostpad.git)
+- Run play-macos.sh
+
+
+Upon running the appropriate play script, you can open [http://localhost:5000](http://localhost:5000) in your browser.  You can access KoboldAI UI2 through http://localhost:5000/new_ui and UI1 through http://localhost:5000/classic
 
 ### When to use KoboldAI
 Here are some things you can do in the KoboldAI UI but **can not** do in Ghostpad:
