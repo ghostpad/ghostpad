@@ -19,6 +19,7 @@ import { StoryNode } from "./StoryNode";
 import { SocketApiContext } from "@/socketApi/SocketApiProvider";
 import { TempStreamNode } from "./TempStreamNode";
 import SpeechToTextPlugin from "./SpeechToTextPlugin";
+import ChatnamePlugin from "./ChatnamePlugin";
 
 const theme: EditorThemeClasses = {
   root: "min-h-full p-4 editor-root",
@@ -85,6 +86,7 @@ function Editor() {
         <HistoryPlugin />
         <KoboldPlugin />
         <SpeechToTextPlugin />
+        <ChatnamePlugin />
       </LexicalComposer>
     </div>
   );

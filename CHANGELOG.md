@@ -1,3 +1,14 @@
+**Release Notes - 0.1.1**
+- Update documentation to better detail hosting + voice chat quirks
+- Display chat character names in bold
+- Change “file” button on folders to “folder options” and change icon to open folder
+- Move “delete folder” button to folder options submenu.
+- Fix broken folder export
+- Fix WI text generation not populating input
+
+**Release Notes - 0.1.0**
+- Add llama.cpp support
+
 **Release Notes - 0.0.7**
 - Remove Horde related code
 - Remove Colab / TPU related code

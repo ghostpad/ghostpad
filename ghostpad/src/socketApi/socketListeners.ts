@@ -26,6 +26,7 @@ import {
   updateStoryCommentary,
 } from "../store/worldInfoSlice";
 import { StoryCommentary } from "@/types/StoryCommentary";
+import { editWorldInfoEntry } from "./editWorldInfoEntry";
 
 export const registerSocketListeners = (
   dispatch: Dispatch<AnyAction>,
@@ -43,9 +44,19 @@ export const registerSocketListeners = (
   socket?.on("world_info_entry", (data: WorldInfoEntry | WorldInfoEntry[]) => {
     dispatch(updateWorldInfoEntry(data));
   });
-  socket?.on("generated_wi", () => {
+  socket?.on("generated_wi", (data) => {
+    const { worldInfoEntries } = store.getState().worldInfo;
+    if (typeof data.uid !== "undefined") {
+      const wiEntry = worldInfoEntries[data.uid];
+      const updatedEntry = {
+        ...wiEntry,
+        manual_text: data.out,
+      };
+      editWorldInfoEntry(updatedEntry, socket);
+      dispatch(updateWorldInfoEntry(updatedEntry));
+    }
     dispatch(setIsLoadingWi(false));
-  })
+  });
   socket?.on("reset_story", () => {
     dispatch(resetStory());
     dispatch(resetWorldInfo());

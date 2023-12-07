@@ -39,8 +39,21 @@ https://github.com/ghostpad/ghostpad/assets/1075900/2c16470e-8817-4829-80a9-02a3
 - Clone the URL of the Github repository (git clone https://github.com/ghostpad/ghostpad.git)
 - Run play-macos.sh
 
+### Network Access
+
+If you would like for Ghostpad to be accessible over your local network, add `--host` after the play script:
+
+`play.sh --host`
+
+or
+
+`play.bat --host`
 
 Upon running the appropriate play script, you can open [http://localhost:5000](http://localhost:5000) in your browser.  You can access KoboldAI UI2 through http://localhost:5000/new_ui and UI1 through http://localhost:5000/classic
+
+### Voice Chat On Remote Hosts
+
+Let's say you have two PCs, you are running Ghostpad on PC 1, and you want to use voice chat over your local network on PC 2. You will need to open `chrome://flags` and search for `Insecure origins treated as secure`, then add PC 1's URL here. This allows it to use your microphone without using https.
 
 ### Misc Demo Videos
 
