@@ -687,7 +687,7 @@ class model_settings(settings):
                          'badwordsids', 'uid_presets', 'model', 'model_type', 'lazy_load', 'fp32_model', 'modeldim','newlinemode', 'tqdm_progress', 'tqdm_rem_time', '_tqdm']
     settings_name = "model"
     default_settings = {"rep_pen" : 1.1, "rep_pen_slope": 1.0, "rep_pen_range": 2048, "temp": 0.5, "top_p": 0.9, "top_k": 0, "top_a": 0.0, "tfs": 1.0, "typical": 1.0,
-                        "sampler_order": [6,0,1,2,3,4,5]}
+                        "min_p": 0.05, "freq_pen": 0, "presence_pen": 0, "mirostat_mode": 0, "mirostat_tau": 5.0, "mirostat_eta": 0.1, "sampler_order": [6,0,1,2,3,4,5]}
     def __init__(self, socketio, koboldai_vars):
         self.enable_whitelist = False
         self._socketio = socketio
@@ -750,6 +750,12 @@ class model_settings(settings):
         self.uid_presets = []
         self.default_preset = {}
         self.use_alt_rep_pen = False
+        self.min_p = 0.05
+        self.freq_pen = 0
+        self.presence_pen = 0
+        self.mirostat_mode = 0
+        self.mirostat_tau = 5.0
+        self.mirostat_eta = 0.1
         
         
 
@@ -774,6 +780,12 @@ class model_settings(settings):
             self.typical = 1.0
             self.rep_pen_range = 1024
             self.rep_pen_slope = 0.7
+            self.min_p = 0.05
+            self.freq_pen = 0
+            self.presence_pen = 0
+            self.mirostat_mode = 0
+            self.mirostat_tau = 5.0
+            self.mirostat_eta = 0.1
             
             #Now we setup our other settings
             if self.simple_randomness < 0:
@@ -907,7 +919,6 @@ class story_settings(settings):
         self.chatname    = "User"
         self.botname    = "Assistant"
         self.stop_sequence = []     #use for configuring stop sequences
-        self.stop_on_eos = False
         self.adventure   = False
         self.actionmode  = 0
         self.storymode   = 2
@@ -1187,6 +1198,7 @@ class user_settings(settings):
         self.rngpersist  = False
         self.nogenmod    = False
         self.debug       = False    # If set to true, will send debug information to the client for display
+        self.stop_on_eos = False
         self.output_streaming = True
         self.smooth_streaming = True
         self.show_probs = False # Whether or not to show token probabilities
@@ -2767,6 +2779,12 @@ default_preset = {
         "rep_pen": 1.1,
         "rep_pen_range": 1024,
         "rep_pen_slope": 0.7,
+        "min_p": 0.05,
+        "freq_pen": 0,
+        "presence_pen": 0,
+        "mirostat_mode": 0,
+        "mirostat_tau": 5.0,
+        "mirostat_eta": 0.1,
         "sampler_order": [
             6,
             0,
