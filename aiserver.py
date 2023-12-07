@@ -3176,7 +3176,7 @@ def actionsubmit(
             data = re.sub(r'\n+', ' ', data)
             if(len(data)):
                 data = f"> {data}\n"
-                if(koboldai_vars.gamestarted):
+                if(len(koboldai_vars.prompt)):
                     data = "\n\n" + data
         
         # "Chat" mode
@@ -3188,7 +3188,7 @@ def actionsubmit(
             data = re.sub(r'\n+\Z', '', data)
             if(len(data)):
                 data = f"{koboldai_vars.chatname}: {data}\n{botname}"
-                if (koboldai_vars.gamestarted):
+                if (len(koboldai_vars.prompt)):
                     data = "\n" + data
         # If we're not continuing, store a copy of the raw input
         if(data != ""):
