@@ -43,6 +43,15 @@ def process_variable_changes(socketio, classname, name, value, old_value, debug_
     global multi_story, koboldai_vars_main
     if serverstarted and name != "serverstarted":
         transmit_time = str(datetime.datetime.now())
+        sequence_key = "{}_{}".format(classname, name)
+        sequence_number = 0
+        if sequence_key in koboldai_vars_main.sequence_numbers:
+            if sequence_key != "story_actions":
+                sequence_number = koboldai_vars_main.sequence_numbers[sequence_key]
+            elif koboldai_vars_main.sequence_numbers[sequence_key] and 'id' in value:
+                action_id = value['id']
+                if (action_id in koboldai_vars_main.sequence_numbers[sequence_key]):
+                    sequence_number = koboldai_vars_main.sequence_numbers[sequence_key][action_id]
         if debug_message is not None:
             print("{} {}: {} changed from {} to {}".format(debug_message, classname, name, old_value, value))
         if value != old_value:
@@ -65,31 +74,31 @@ def process_variable_changes(socketio, classname, name, value, old_value, debug_
                 if not has_request_context():
                     if queue is not None:
                         #logger.debug("Had to use queue")
-                        queue.put(["var_changed", {"classname": "actions", "name": "Action Count", "old_value": None, "value":value.action_count, "transmit_time": transmit_time}, {"broadcast":True, "room":room}])
+                        queue.put(["var_changed", {"classname": "actions", "name": "Action Count", "old_value": None, "value":value.action_count, "transmit_time": transmit_time,  "sequence_number": sequence_number}, {"broadcast":True, "room":room}])
                         
                         data_to_send = []
                         for i in list(value.actions)[-100:]:
                             data_to_send.append({"id": i, "action": value.actions[i]})
-                        queue.put(["var_changed", {"classname": "story", "name": "actions", "old_value": None, "value":data_to_send, "transmit_time": transmit_time}, {"broadcast":True, "room":room}])
+                        queue.put(["var_changed", {"classname": "story", "name": "actions", "old_value": None, "value":data_to_send, "transmit_time": transmit_time,  "sequence_number": sequence_number}, {"broadcast":True, "room":room}])
                 
                 else:
                     if socketio is not None:
-                        socketio.emit("var_changed", {"classname": "actions", "name": "Action Count", "old_value": None, "value":value.action_count, "transmit_time": transmit_time}, broadcast=True, room=room)
+                        socketio.emit("var_changed", {"classname": "actions", "name": "Action Count", "old_value": None, "value":value.action_count, "transmit_time": transmit_time,  "sequence_number": sequence_number}, broadcast=True, room=room)
                     
                     data_to_send = []
                     for i in list(value.actions)[-100:]:
                         data_to_send.append({"id": i, "action": value.actions[i]})
                     if socketio is not None:
-                        socketio.emit("var_changed", {"classname": "story", "name": "actions", "old_value": None, "value": data_to_send, "transmit_time": transmit_time}, broadcast=True, room=room)
+                        socketio.emit("var_changed", {"classname": "story", "name": "actions", "old_value": None, "value": data_to_send, "transmit_time": transmit_time, "sequence_number": sequence_number}, broadcast=True, room=room)
             elif isinstance(value, KoboldWorldInfo):
                 value.send_to_ui()
             else:
                 #If we got a variable change from a thread other than what the app is run it, eventlet seems to block and no further messages are sent. Instead, we'll rely the message to the app and have the main thread send it
                 if not has_request_context():
                     if not koboldai_vars_main.host or name not in password_vars:
-                        data = ["var_changed", {"classname": classname, "name": name, "old_value": clean_var_for_emit(old_value), "value": clean_var_for_emit(value), "transmit_time": transmit_time}, {"include_self":True, "broadcast":True, "room":room}]
+                        data = ["var_changed", {"classname": classname, "name": name, "old_value": clean_var_for_emit(old_value), "value": clean_var_for_emit(value), "transmit_time": transmit_time, "sequence_number": sequence_number}, {"include_self":True, "broadcast":True, "room":room}]
                     else:
-                        data = ["var_changed", {"classname": classname, "name": name, "old_value": "*" * len(old_value) if old_value is not None else "", "value": "*" * len(value) if value is not None else "", "transmit_time": transmit_time}, {"include_self":True, "broadcast":True, "room":room}]
+                        data = ["var_changed", {"classname": classname, "name": name, "old_value": "*" * len(old_value) if old_value is not None else "", "value": "*" * len(value) if value is not None else "", "transmit_time": transmit_time, "sequence_number": sequence_number}, {"include_self":True, "broadcast":True, "room":room}]
                     if queue is not None:
                         #logger.debug("Had to use queue")
                         queue.put(data)
@@ -97,9 +106,9 @@ def process_variable_changes(socketio, classname, name, value, old_value, debug_
                 else:
                     if socketio is not None:
                         if not koboldai_vars_main.host or name not in password_vars:
-                            socketio.emit("var_changed", {"classname": classname, "name": name, "old_value": clean_var_for_emit(old_value), "value": clean_var_for_emit(value), "transmit_time": transmit_time}, include_self=True, broadcast=True, room=room)
+                            socketio.emit("var_changed", {"classname": classname, "name": name, "old_value": clean_var_for_emit(old_value), "value": clean_var_for_emit(value), "transmit_time": transmit_time, "sequence_number": sequence_number}, include_self=True, broadcast=True, room=room)
                         else:
-                            socketio.emit("var_changed", {"classname": classname, "name": name, "old_value":  "*" * len(old_value) if old_value is not None else "", "value": "*" * len(value) if value is not None else "", "transmit_time": transmit_time}, include_self=True, broadcast=True, room=room)
+                            socketio.emit("var_changed", {"classname": classname, "name": name, "old_value":  "*" * len(old_value) if old_value is not None else "", "value": "*" * len(value) if value is not None else "", "transmit_time": transmit_time, "sequence_number": sequence_number}, include_self=True, broadcast=True, room=room)
 
 def basic_send(socketio, classname, event, data):
     #Get which room we'll send the messages to
@@ -681,8 +690,8 @@ class settings(object):
 
 class model_settings(settings):
     local_only_variables = ['apikey', 'default_preset']
-    no_save_variables = ['modelconfig', 'custmodpth', 'generated_tkns', 
-                         'loaded_layers', 'total_layers', 'total_download_chunks', 'downloaded_chunks', 'presets', 'default_preset', 
+    no_save_variables = ['modelconfig', 'custmodpth', 'generated_tkns',
+                         'loaded_layers', 'total_layers', 'total_download_chunks', 'downloaded_chunks', 'presets', 'default_preset',
                          'welcome', 'welcome_default', 'simple_randomness', 'simple_creativity', 'simple_repitition',
                          'badwordsids', 'uid_presets', 'model', 'model_type', 'lazy_load', 'fp32_model', 'modeldim','newlinemode', 'tqdm_progress', 'tqdm_rem_time', '_tqdm']
     settings_name = "model"
@@ -1245,12 +1254,12 @@ class undefined_settings(settings):
         logger.error("{} just set {} to {} in koboldai_vars. That variable isn't defined!".format(inspect.stack()[1].function, name, value))
         
 class system_settings(settings):
-    local_only_variables = ['lua_state', 'lua_logname', 'lua_koboldbridge', 'lua_kobold', 
+    local_only_variables = ['sequence_numbers', 'lua_state', 'lua_logname', 'lua_koboldbridge', 'lua_kobold',
                             'lua_koboldcore', 'regex_sl', 'acregex_ai', 'acregex_ui', 'comregex_ai', 'comregex_ui',
-                            'sp', 'inference_config', 'image_pipeline', 
+                            'sp', 'inference_config', 'image_pipeline',
                             'summarizer', 'summary_tokenizer', 'tts_model', 'rng_states', 'comregex_ai', 'comregex_ui']
-    no_save_variables = ['lua_state', 'lua_logname', 'lua_koboldbridge', 'lua_kobold', 
-                         'lua_koboldcore', 'sp', 'sp_length', 'aibusy', 
+    no_save_variables = ['sequence_numbers', 'lua_state', 'lua_logname', 'lua_koboldbridge', 'lua_kobold',
+                         'lua_koboldcore', 'sp', 'sp_length', 'aibusy',
                          'serverstarted', 'inference_config', 'image_pipeline', 'summarizer'
                          'summary_tokenizer', 'noai', 'disable_set_aibusy', 'cloudflare_link', 'tts_model',
                          'generating_image', 'bit_8_available', 'host', 'hascuda', 'usegpu', 'rng_states', 'comregex_ai', 'comregex_ui', 'git_repository', 'git_branch']
@@ -1268,6 +1277,7 @@ class system_settings(settings):
         self.lua_logname = ...    # Name of previous userscript that logged to terminal
         self.lua_running = False  # Whether or not Lua is running (i.e. wasn't stopped due to an error)
         self.abort       = False  # Whether or not generation was aborted by clicking on the submit button during generation
+        self.sequence_numbers = {"story_actions": {}}  # Increments on each settings change, used to gracefully handle concurrent settings changes
         self.compiling   = False  # If using a TPU Colab, this will be set to True when the TPU backend starts compiling and then set to False again
         self.checking    = False  # Whether or not we are actively checking to see if TPU backend is compiling or not
         self.sp_changed  = False  # This gets set to True whenever a userscript changes the soft prompt so that check_for_sp_change() can alert the browser that the soft prompt has changed
@@ -1319,7 +1329,7 @@ class system_settings(settings):
         self.disable_input_formatting = False
         self.disable_output_formatting = False
         self.api_tokenizer_id = None
-        self.port = 5000
+        self.port = 5050
         self.generating_image = False #The current status of image generation
         self.image_pipeline = None
         self.summarizer = None

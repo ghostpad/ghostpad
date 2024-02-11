@@ -14,6 +14,8 @@ import {
   updateLoadedFile,
   updateMovingWIEntry,
 } from "@/store/uiSlice";
+import { updateLocalSequenceNumber } from "@/store/configSlice";
+import { getSequenceNumber } from "@/util/getSequenceNumber";
 
 export const WorldInfoFolder = ({
   folderName,
@@ -28,11 +30,14 @@ export const WorldInfoFolder = ({
 }) => {
   const socketApi = useContext(SocketApiContext);
   const dispatch = useDispatch();
-  const { timestamps } = useSelector((state: RootState) => state.config);
+  const { sequenceNumbers } = useSelector((state: RootState) => state.config);
+  const [sequenceNumber, isSynced] = getSequenceNumber(
+    "story_worldinfo",
+    sequenceNumbers
+  );
   const { movingWIEntry, loadedFile } = useSelector((state: RootState) => {
     return state.ui.sidebarState;
   });
-  const timestamp = (timestamps["story"]?.["worldinfo"] as number) || 0;
 
   useEffect(() => {
     if (!loadedFile) return;
@@ -75,8 +80,8 @@ export const WorldInfoFolder = ({
       >
         <AiFillFolder size="1.5em" className="inline pr-2 flex-shrink-0" />
         <SyncInput
-          timestamp={timestamp}
           disabled={folderUid === "-1"}
+          isSynced={isSynced}
           value={folderUid === "-1" ? "Main Entries" : folderName}
           onChange={
             folderUid === "-1"
@@ -85,6 +90,12 @@ export const WorldInfoFolder = ({
                   socketApi?.renameWorldInfoFolder(
                     localValue,
                     evt.target.value
+                  );
+                  dispatch(
+                    updateLocalSequenceNumber({
+                      key: "story_worldinfo",
+                      sequenceNumber: sequenceNumber + 1,
+                    })
                   );
                 }
           }

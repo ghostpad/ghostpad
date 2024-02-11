@@ -5981,7 +5981,8 @@ def UI_2_var_change(data):
         return
     classname = data['ID'].split("_")[0]
     name = data['ID'][len(classname)+1:]
-    classname += "_settings"
+    classname_settings = classname + "_settings"
+    sequence_number = data['sequence_number']
     
     #Need to fix the data type of value to match the module
     if type(getattr(koboldai_vars, name)) == int:
@@ -5999,20 +6000,24 @@ def UI_2_var_change(data):
     else:
         raise ValueError("Unknown Type {} = {}".format(name, type(getattr(koboldai_vars, name))))
     
+    if data['ID'] != "story_actions":
+        sequence_id = data['ID'] if data['ID'] != "story_prompt" else "story_prompt_wi_highlighted_text"
+        koboldai_vars.sequence_numbers[sequence_id] = sequence_number
+
     #print("Setting {} to {} as type {}".format(name, value, type(value)))
     setattr(koboldai_vars, name, value)
-    
+
     #Now let's save except for story changes
-    if classname != "story_settings":
-        if classname == "model_settings":
+    if classname != "story":
+        if classname == "model":
             filename = "settings/{}.v2_settings".format(koboldai_vars.model.replace("/", "_"))
         else:
-            filename = "settings/{}.v2_settings".format(classname)
+            filename = "settings/{}.v2_settings".format(classname_settings)
         
         if not os.path.exists("settings"):
             os.mkdir("settings")
         with open(filename, "w") as settings_file:
-            settings_file.write(getattr(koboldai_vars, "_{}".format(classname)).to_json())
+            settings_file.write(getattr(koboldai_vars, "_{}".format(classname_settings)).to_json())
     
     if name in ['seed', 'seed_specified']:
         set_seed()
@@ -6123,6 +6128,8 @@ def UI_2_Set_Selected_Text(data):
     if not koboldai_vars.quiet:
         logger.info("Updating Selected Text: {}".format(data))
     action_id = int(data["id"])
+    sequence_number = data['sequence_number']
+    koboldai_vars.sequence_numbers['story_actions'][action_id] = sequence_number
 
     if not koboldai_vars.actions.actions[action_id].get("Original Text"):
         koboldai_vars.actions.actions[action_id]["Original Text"] = data["text"]
@@ -6805,14 +6812,16 @@ def UI_2_scratchpad_prompt(data):
 #==================================================================#
 @socketio.on('phrase_bias_update')
 @logger.catch
-def UI_2_phrase_bias_update(biases):
-    koboldai_vars.biases = biases
+def UI_2_phrase_bias_update(data):
+    koboldai_vars.sequence_numbers['story_biases'] = data['sequence_number']
+    koboldai_vars.biases = data['biases']
 
 
 @socketio.on("substitution_update")
 @logger.catch
-def UI_2_substitutions_update(substitutions):
-    koboldai_vars.substitutions = substitutions
+def UI_2_substitutions_update(data):
+    koboldai_vars.sequence_numbers['story_substitutions'] = data['sequence_number']
+    koboldai_vars.substitutions = data['substitutions']
 
 
 #==================================================================#
@@ -10820,7 +10829,7 @@ def run():
     patch_transformers()
     
     # Start Flask/SocketIO (Blocking, so this must be last method!)
-    port = args.port if "port" in args and args.port is not None else 5000
+    port = args.port if "port" in args and args.port is not None else 5050
     koboldai_vars.port = port
     
     if(koboldai_vars.host):
@@ -10910,6 +10919,6 @@ else:
     logger.init_ok("Flask", status="OK")
     patch_transformers()
     startup(command_line_backend)
-    koboldai_settings.port = args.port if "port" in args and args.port is not None else 5000
+    koboldai_settings.port = args.port if "port" in args and args.port is not None else 5050
     print("{0}\nServer started in WSGI mode!{1}".format(colors.GREEN, colors.END), flush=True)
     

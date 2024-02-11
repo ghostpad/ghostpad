@@ -1,5 +1,5 @@
-transformers[sentencepiece]==4.34.0
-huggingface_hub==0.16.4
+transformers[sentencepiece]==4.36.0
+huggingface_hub==0.19.4
 optimum[onnxruntime]==1.13.2
 safetensors==0.3.3
 Flask==2.3.3
@@ -40,7 +40,7 @@ pytest-metadata==2.0.4
 requests-mock==1.10.0
 git+https://github.com/0cc4m/hf_bleeding_edge/
 einops
-peft==0.3.0
+peft==0.7.1
 scipy
 https://github.com/PanQiWei/AutoGPTQ/releases/download/v0.4.2/auto_gptq-0.4.2+cu118-cp310-cp310-linux_x86_64.whl; sys_platform == 'linux' and python_version == '3.10'
 https://github.com/PanQiWei/AutoGPTQ/releases/download/v0.4.2/auto_gptq-0.4.2+cu118-cp310-cp310-win_amd64.whl; sys_platform == 'win32' and python_version == '3.10'

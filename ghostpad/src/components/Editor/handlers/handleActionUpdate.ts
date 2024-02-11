@@ -1,5 +1,4 @@
 import * as R from "ramda";
-import { ConfigState, updateOwnActions } from "@/store/configSlice";
 import { store } from "@/store/store";
 import { Action } from "@/types/Action";
 import { MsgVarChanged } from "@/types/MsgVarChanged";
@@ -24,36 +23,22 @@ export const handleActionUpdate = (
     // The forked backend will probably address this at some point, but for now,
     // we need to macgyver a way to ignore the action we just sent.
 
-    const {
-      ownActions,
-    }: ConfigState = store.getState().config;
     const actionId = Number(koboldAction.id);
-    const ownActionIndex = ownActions.findIndex(
-      (ownAction) =>
-        ownAction.id === actionId &&
-        ownAction.text === koboldAction.action?.["Selected Text"]
-    );
     const actionText = koboldAction.action?.["Selected Text"] || "";
     const existingNode = $nodesOfType(ActionNode).find((action) => {
       const isStoryChild = $isStoryNode(action.getParent());
       const isMatchingId = action.getActionId() === actionId;
       return isStoryChild && isMatchingId;
     });
-    if (!actionText || ownActionIndex > -1) {
-      if (!actionText) {
-        // We received an empty action, which means it was deleted.
-        if (existingNode) {
-          existingNode.remove();
-        }
-      }
-      if (ownActionIndex > -1) {
-        // This is the action we just sent, so we can remove it from the list of actions we're tracking.
-        const updatedOwnActions = [...ownActions];
-        updatedOwnActions.splice(ownActionIndex, 1);
-        store.dispatch(updateOwnActions(updatedOwnActions));
+
+    if (!actionText) {
+      // We received an empty action, which means it was deleted.
+      if (existingNode) {
+        existingNode.remove();
       }
       return;
     }
+
     const existingContent = existingNode?.getLatest().getTextContent();
     if (actionText === existingContent) return;
 

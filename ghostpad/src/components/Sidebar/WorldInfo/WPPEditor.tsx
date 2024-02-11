@@ -1,24 +1,27 @@
 import { SyncInput } from "@/components/Forms/SyncInput";
 import { SocketApiContext } from "@/socketApi/SocketApiProvider";
+import { updateLocalSequenceNumber } from "@/store/configSlice";
 import { WPPAttributes, WorldInfoEntry } from "@/types/WorldInfo";
 import { ChangeEvent, useContext, useEffect, useMemo, useState } from "react";
 import { BiKey } from "react-icons/bi";
+import { useDispatch } from "react-redux";
 type AttributePair = [key: string, value: string[]];
 
 export const WPPEditor = ({
-  timestamp,
+  sequenceNumber,
+  isSynced,
   value,
   worldInfoEntry,
 }: {
-  timestamp: number;
+  sequenceNumber: number;
+  isSynced: boolean;
   value: WPPAttributes;
   worldInfoEntry: WorldInfoEntry;
 }) => {
   const [syncedValue, setSyncedValue] = useState<AttributePair[]>([]);
   const [localValue, setLocalValue] = useState<AttributePair[]>([]);
-  const [localTimestamp, setLocalTimestamp] = useState<number>(0);
-  const displayedValue =
-    timestamp > localTimestamp + 500 ? syncedValue : localValue;
+  const dispatch = useDispatch();
+  const displayedValue = syncedValue;
   const attributeKeys = useMemo(() => Object.keys(value), [value]);
   const socketApi = useContext(SocketApiContext);
   useEffect(() => {
@@ -49,7 +52,6 @@ export const WPPEditor = ({
       );
 
       setLocalValue(newLocalValue);
-      setLocalTimestamp(Date.now());
       if (value[evtKey]) return;
       socketApi?.editWorldInfoEntry({
         ...worldInfoEntry,
@@ -58,6 +60,12 @@ export const WPPEditor = ({
           attributes: newAttributes,
         },
       });
+      dispatch(
+        updateLocalSequenceNumber({
+          key: "story_worldinfo",
+          sequenceNumber: sequenceNumber + 1,
+        })
+      );
     };
 
   const onValChange =
@@ -82,7 +90,6 @@ export const WPPEditor = ({
       );
 
       setLocalValue(newLocalValue);
-      setLocalTimestamp(Date.now());
       socketApi?.editWorldInfoEntry({
         ...worldInfoEntry,
         wpp: {
@@ -90,6 +97,12 @@ export const WPPEditor = ({
           attributes: newAttributes,
         },
       });
+      dispatch(
+        updateLocalSequenceNumber({
+          key: "story_worldinfo",
+          sequenceNumber: sequenceNumber + 1,
+        })
+      );
     };
 
   // Delete empty field on blur
@@ -98,7 +111,6 @@ export const WPPEditor = ({
       .filter(([key]) => key.length)
       .map<AttributePair>(([key, val]) => [key, val.filter((v) => v.length)]);
     setLocalValue(newVal);
-    setLocalTimestamp(Date.now());
     if (JSON.stringify(newVal) !== JSON.stringify(localValue)) {
       socketApi?.editWorldInfoEntry({
         ...worldInfoEntry,
@@ -119,9 +131,9 @@ export const WPPEditor = ({
               <div className="flex my-4">
                 <BiKey size="1.5em" className="self-center mr-2" />
                 <SyncInput
+                  isSynced={isSynced}
                   placeholder="New Key"
                   className="flex-grow font-bold"
-                  timestamp={timestamp}
                   value={key}
                   onBlur={onBlur}
                   onChange={onKeyChange(key, pairIdx)}
@@ -131,9 +143,9 @@ export const WPPEditor = ({
                 {(pairIdx < displayedValue.length ? [...val, ""] : val).map(
                   (v, valIdx) => (
                     <SyncInput
+                      isSynced={isSynced}
                       className="my-2 ml-8"
                       placeholder="New Value"
-                      timestamp={timestamp}
                       value={v}
                       key={valIdx}
                       onBlur={onBlur}

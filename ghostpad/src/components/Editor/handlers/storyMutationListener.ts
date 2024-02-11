@@ -1,7 +1,4 @@
-import {
-  $getRoot,
-  $nodesOfType,
-} from "lexical";
+import { $getRoot, $nodesOfType } from "lexical";
 import { $isActionNode, ActionNode } from "../ActionNode";
 import { $getStory } from "../StoryNode";
 import { $isTempReinsertNode } from "../TempReinsertNode";
@@ -17,7 +14,12 @@ export const storyMutationListener = () => {
   // When nodes end up outside of an action, find an action to put them in.
   const orphanNodes = $getStory()
     .getChildren()
-    .filter((node) => !$isActionNode(node) && !$isTempReinsertNode(node) && !$isTempStreamNode(node));
+    .filter(
+      (node) =>
+        !$isActionNode(node) &&
+        !$isTempReinsertNode(node) &&
+        !$isTempStreamNode(node)
+    );
 
   if (orphanNodes.length) {
     orphanNodes.forEach((node) => {
@@ -27,7 +29,8 @@ export const storyMutationListener = () => {
           (sibling) =>
             sibling.getType() === "action" &&
             (sibling.getTextContentSize() ||
-              (sibling.getIndexWithinParent() === 0 && !$getRoot().getTextContentSize()))
+              (sibling.getIndexWithinParent() === 0 &&
+                !$getRoot().getTextContentSize()))
         )[0];
       const nextAction = node
         .getNextSiblings()
@@ -35,12 +38,13 @@ export const storyMutationListener = () => {
           (sibling) =>
             sibling.getType() === "action" &&
             (sibling.getTextContentSize() ||
-              (sibling.getIndexWithinParent() === 0 && !$getRoot().getTextContentSize()))
+              (sibling.getIndexWithinParent() === 0 &&
+                !$getRoot().getTextContentSize()))
         )[0];
       const isBefore =
         node.getIndexWithinParent() <
         (firstAction?.getIndexWithinParent() || 0);
-      const targetNode = isBefore ? nextAction : (prevAction as ActionNode);
+      const targetNode = (isBefore ? nextAction : prevAction) as ActionNode;
 
       targetNode?.splice(isBefore ? 0 : targetNode.getChildrenSize(), 0, [
         node,

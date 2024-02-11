@@ -1,4 +1,3 @@
-// import React from "react";
 import { useRef, useContext, useEffect } from "react";
 import "./App.css";
 import { useDispatch, useSelector } from "react-redux";
@@ -76,7 +75,7 @@ const GenerateButton = ({
               storyConfig?.prompt_wi_highlighted_text.length == 0 ||
               storyConfig?.prompt_wi_highlighted_text[0]?.text == "";
             const contentfulActions = storyConfig?.actions.filter((action) => {
-              return action?.action["Selected Text"].length > 0;
+              return action?.action?.["Selected Text"].length > 0;
             });
             const lastContentfulAction =
               contentfulActions?.[contentfulActions.length - 1];

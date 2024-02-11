@@ -1,4 +1,4 @@
-import { ChangeEvent, useContext, useEffect, useState } from "react";
+import { ChangeEvent, useContext, useEffect } from "react";
 import { shallowEqual, useDispatch, useSelector } from "react-redux";
 import { SocketContext } from "../SocketProvider";
 import { RootState } from "@/store/store";
@@ -6,25 +6,30 @@ import { closeModal, updateLocalSubstitutions } from "@/store/uiSlice";
 import { Substitution } from "@/types/KoboldConfig";
 import { BiCheck, BiX } from "react-icons/bi";
 import { koboldConfigMiddleware } from "@/store/koboldConfigMiddleware";
-import { updateKoboldVar } from "@/store/configSlice";
+import {
+  updateKoboldVar,
+  updateLocalSequenceNumber,
+} from "@/store/configSlice";
 import { SocketApiContext } from "@/socketApi/SocketApiProvider";
+import { getSequenceNumber } from "@/util/getSequenceNumber";
 
 export const SubstitutionsModal = () => {
   const { socket } = useContext(SocketContext);
   const socketApi = useContext(SocketApiContext);
-  const { timestamps, modalState, substitutions, localSubstitutions } =
+  const { modalState, substitutions, localSubstitutions, sequenceNumbers } =
     useSelector((state: RootState) => {
       return {
-        timestamps: state.config.timestamps,
         modalState: state.ui.modalState,
         substitutions: state.config.koboldConfig?.story?.substitutions,
         localSubstitutions: state.ui.localSubstitutions,
+        sequenceNumbers: state.config.sequenceNumbers,
       };
     }, shallowEqual);
   const dispatch = useDispatch();
-
-  // The local representations can have a empty strings for either value, but a sub with an empty target value will not be sent to the server.
-  const [localTimestamp, setLocalTimestamp] = useState<number | null>(null);
+  const [sequenceNumber, isSynced] = getSequenceNumber(
+    "story_substitutions",
+    sequenceNumbers
+  );
 
   useEffect(() => {
     const removeSubstitutionUpdateListener =
@@ -35,30 +40,23 @@ export const SubstitutionsModal = () => {
             action.payload.classname === "story" &&
             action.payload.name === "substitutions"
           ) {
-            const remoteTimestamp =
-              (timestamps.story?.["substitutions"] as number) ?? 0;
+            const updatedSubstitutions = [
+              ...((action.payload.value as Substitution[]) || []),
+            ];
+            const localDrafts = localSubstitutions.reduce<
+              { substitution: Substitution; idx: number }[]
+            >((drafts, substitution, idx) => {
+              if (substitution.target === "") {
+                drafts.push({ substitution, idx });
+              }
+              return drafts;
+            }, []);
 
-            const remoteIsNewest = remoteTimestamp >= (localTimestamp || 0);
-            if (remoteIsNewest) {
-              const updatedSubstitutions = [
-                ...((action.payload.value as Substitution[]) || []),
-              ];
-              const localDrafts = localSubstitutions.reduce<
-                { substitution: Substitution; idx: number }[]
-              >((drafts, substitution, idx) => {
-                if (substitution.target === "") {
-                  drafts.push({ substitution, idx });
-                }
-                return drafts;
-              }, []);
+            localDrafts.forEach(({ substitution, idx }) => {
+              updatedSubstitutions.splice(idx, 0, substitution);
+            });
 
-              localDrafts.forEach(({ substitution, idx }) => {
-                updatedSubstitutions.splice(idx, 0, substitution);
-              });
-
-              dispatch(updateLocalSubstitutions(updatedSubstitutions));
-              setLocalTimestamp(Date.now());
-            }
+            dispatch(updateLocalSubstitutions(updatedSubstitutions));
           }
         },
       });
@@ -66,13 +64,7 @@ export const SubstitutionsModal = () => {
     return () => {
       removeSubstitutionUpdateListener();
     };
-  }, [
-    dispatch,
-    localSubstitutions,
-    localTimestamp,
-    substitutions,
-    timestamps.story,
-  ]);
+  }, [dispatch, localSubstitutions, substitutions, isSynced]);
 
   const handleChange = (
     changedKey: "target" | "substitution" | "enabled",
@@ -91,12 +83,17 @@ export const SubstitutionsModal = () => {
       newLocalSubstitutions[idx].enabled = evt?.target.checked || false;
     }
     dispatch(updateLocalSubstitutions(newLocalSubstitutions));
-    setLocalTimestamp(Date.now());
 
     const validSubstitutions = newLocalSubstitutions.filter(
       (sub) => sub.target !== ""
     );
-    socketApi?.substitutionUpdate(validSubstitutions)
+    dispatch(
+      updateLocalSequenceNumber({
+        key: "story_substitutions",
+        sequenceNumber: sequenceNumber + 1,
+      })
+    );
+    socketApi?.substitutionUpdate(validSubstitutions, sequenceNumber + 1);
   };
 
   const handleRemove = (idx: number) => {
@@ -104,12 +101,17 @@ export const SubstitutionsModal = () => {
     const newLocalSubstitutions = localSubstitutions.map((sub) => ({ ...sub }));
     newLocalSubstitutions.splice(idx, 1);
     dispatch(updateLocalSubstitutions(newLocalSubstitutions));
-    setLocalTimestamp(Date.now());
 
     const validSubstitutions = newLocalSubstitutions.filter(
       (sub) => sub.target !== ""
     );
-    socketApi?.substitutionUpdate(validSubstitutions)
+    dispatch(
+      updateLocalSequenceNumber({
+        key: "story_substitutions",
+        sequenceNumber: sequenceNumber + 1,
+      })
+    );
+    socketApi?.substitutionUpdate(validSubstitutions, sequenceNumber + 1);
   };
 
   const handleToggle = (idx: number) => {
@@ -117,12 +119,17 @@ export const SubstitutionsModal = () => {
     const newLocalSubstitutions = localSubstitutions.map((sub) => ({ ...sub }));
     newLocalSubstitutions[idx].enabled = !newLocalSubstitutions[idx].enabled;
     dispatch(updateLocalSubstitutions(newLocalSubstitutions));
-    setLocalTimestamp(Date.now());
 
     const validSubstitutions = newLocalSubstitutions.filter(
       (sub) => sub.target !== ""
     );
-    socketApi?.substitutionUpdate(validSubstitutions)
+    dispatch(
+      updateLocalSequenceNumber({
+        key: "story_substitutions",
+        sequenceNumber: sequenceNumber + 1,
+      })
+    );
+    socketApi?.substitutionUpdate(validSubstitutions, sequenceNumber + 1);
   };
 
   return !modalState.substitutions.active ? null : (

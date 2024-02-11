@@ -5,20 +5,6 @@ import { KoboldConfig } from "@/types/KoboldConfig";
 import * as R from "ramda";
 import { Action } from "@/types/Action";
 
-export type KoboldConfigTimestamps = {
-  story?: {
-    actions?: {
-      [key: number]: number;
-    };
-    [key: string]: number | { [key: number]: number } | undefined;
-  };
-  [key: string]:
-    | {
-        [key: string]: number | { [key: number]: number } | undefined;
-      }
-    | undefined;
-};
-
 export type ReinsertHistoryItem = {
   reinsertQueue: ReinsertQueue;
   anchor: {
@@ -43,12 +29,18 @@ export type GhostpadConfig = {
   speechSynthesisVoice: string | null;
 };
 
+// A tuple of [sequenceNumber, isSynced]
+export type SequenceNumbers = {
+  [K in string]: [number, boolean] | { [K in string]: [number, boolean] };
+} & {
+  story_actions: { [K in string]: [number, boolean] };
+};
+
 export type ConfigState = {
   ghostpadConfig: GhostpadConfig | null;
   koboldConfig: Partial<KoboldConfig>;
-  timestamps: KoboldConfigTimestamps;
   lastNodeCount: number;
-  ownActions: OwnAction[];
+  sequenceNumbers: SequenceNumbers;
   loadState: {
     prompt: boolean;
     actions: boolean;
@@ -65,12 +57,6 @@ export type ConfigState = {
   speechSynthesisVoice: string | null;
 };
 
-export type OwnAction = {
-  id: number | undefined;
-  text: string;
-  timestamp: number;
-};
-
 export type ReinsertQueueItem = {
   key: number | undefined;
   text: string;
@@ -80,9 +66,10 @@ export type ReinsertQueue = ReinsertQueueItem[];
 const initialState: ConfigState = {
   ghostpadConfig: null,
   koboldConfig: {},
-  timestamps: {},
+  sequenceNumbers: {
+    story_actions: {},
+  },
   lastNodeCount: 0,
-  ownActions: [],
   pendingInsertion: false,
   pendingRetry: false,
   reinsertQueue: [],
@@ -167,13 +154,14 @@ export const configSlice = createSlice({
 
     resetStory: (state) => ({
       ...state,
-      timestamps: {},
+      sequenceNumbers: {
+        story_actions: {},
+      },
       loadState: {
         prompt: false,
         actions: false,
       },
       lastNodeCount: 0,
-      ownActions: [],
     }),
 
     setNodeCount: (state, action: PayloadAction<number>) => ({
@@ -259,41 +247,36 @@ export const configSlice = createSlice({
       reinsertQueue: action.payload,
     }),
 
-    updateKoboldConfigTimestamp: (
+    updateLocalSequenceNumber: (
       state: ConfigState,
-      action: PayloadAction<{ id: number; timestamp: number }>
-    ) => ({
-      ...state,
-      timestamps: {
-        ...state.timestamps,
-        story: {
-          ...(state.timestamps.story || {}),
-          actions: {
-            ...state.timestamps.story?.actions,
-            [action.payload.id]: action.payload.timestamp,
-          },
-        },
-      },
-    }),
-
-    updateOwnActions: (
-      state: ConfigState,
-      action: PayloadAction<OwnAction[]>
-    ) => ({
-      ...state,
-      // If we haven't received an action back after 5 seconds, we assume it failed and remove it from the list.
-      ownActions: action.payload.filter(
-        (ownAction) => Date.now() - ownAction.timestamp < 5000
-      ),
-    }),
+      action: PayloadAction<{
+        key: string;
+        sequenceNumber: number;
+        actionId?: number;
+      }>
+    ) => {
+      if (
+        action.payload.key === "story_actions" &&
+        typeof action.payload.actionId !== "undefined"
+      ) {
+        state.sequenceNumbers.story_actions[action.payload.actionId] = [
+          action.payload.sequenceNumber,
+          false,
+        ];
+      } else {
+        state.sequenceNumbers[action.payload.key] = [
+          action.payload.sequenceNumber,
+          false,
+        ];
+      }
+      return state;
+    },
 
     updateKoboldVar: (
       state: ConfigState,
       action: PayloadAction<MsgVarChanged>
     ) => {
-      const { koboldConfig, timestamps, lastNodeCount, loadState, ownActions } =
-        state;
-      const updatedOwnActions = [...ownActions];
+      const { koboldConfig, loadState } = state;
       const isActionUpdate =
         action.payload.classname === "story" &&
         action.payload.name === "actions";
@@ -304,46 +287,21 @@ export const configSlice = createSlice({
         action.payload.classname === "system" &&
         action.payload.name === "aibusy";
 
-      const [dateStr, microsecondsStr] =
-        action.payload.transmit_time.split(".");
-      const koboldConfigTimestamp =
-        Date.parse(dateStr) + parseInt(microsecondsStr) / 1000;
+      const sequenceNumberKey = `${action.payload.classname}_${action.payload.name}`;
 
-      if (isAiBusyChange) {
-        if (
-          action.payload.value === false &&
-          koboldConfig.system?.noai === false
-        ) {
-          if (koboldConfig.story?.actions.length) {
-            return {
-              ...state,
-              koboldConfig: {
-                ...koboldConfig,
-                system: {
-                  ...(koboldConfig as KoboldConfig).system,
-                  aibusy: false,
-                },
-              },
-            };
-          }
-        } else if (action.payload.value === true) {
-          return {
-            ...state,
-            koboldConfig: {
-              ...koboldConfig,
-              system: {
-                ...(koboldConfig as KoboldConfig).system,
-                aibusy: true,
-              },
-            },
-            ownActions: [],
-          };
-        }
+      if (typeof action.payload.sequence_number === "number" && !isActionUpdate) {
+        state.sequenceNumbers[sequenceNumberKey] = [
+          action.payload.sequence_number,
+          true,
+        ];
       }
 
-      if (isActionUpdate || isPromptUpdate) {
-        if (isPromptUpdate && action.payload.old_value !== null) return state;
+      if (isAiBusyChange && state.koboldConfig.system) {
+        state.koboldConfig.system.aibusy = !!action.payload.value;
+        return state;
       }
+
+      if (isPromptUpdate && action.payload.old_value !== null) return state;
 
       const update: Partial<KoboldConfig> = {
         [action.payload.classname]: {
@@ -351,59 +309,45 @@ export const configSlice = createSlice({
         },
       };
 
-      const timestampUpdate: KoboldConfigTimestamps = {
-        [action.payload.classname]: {
-          [action.payload.name]: koboldConfigTimestamp,
-        },
-      };
-
       if (
         isActionUpdate &&
         typeof action.payload.value === "object" &&
-        update.story
+        !Array.isArray(action.payload.value)
       ) {
         const value = action.payload.value as Action;
-        if (!Array.isArray(value) && typeof value.id === "number") {
-          update.story.actions = [...(koboldConfig.story?.actions || [])];
-          const existingActionIdx = update.story.actions.findIndex(
-            (action) => action.id === value.id
-          );
-          const existingAction = update.story.actions[existingActionIdx] || {};
-          if (existingAction.id >= 0) {
-            update.story.actions[existingActionIdx] = {
-              ...existingAction,
-              action: value.action,
-            };
-          } else {
-            update.story.actions.push(value);
-          }
-
-          timestampUpdate.story ||= {};
-          timestampUpdate.story.actions = {
-            ...(timestamps.story?.actions || {}),
-            [value.id]: koboldConfigTimestamp,
+        const story = update.story!;
+        story.actions = [...(koboldConfig.story?.actions || [])];
+        const existingActionIdx = story.actions.findIndex(
+          (action) => action.id === value.id
+        );
+        const existingAction = story.actions[existingActionIdx] || {};
+        if (existingAction.id >= 0) {
+          story.actions[existingActionIdx] = {
+            ...existingAction,
+            action: value.action,
           };
+        } else {
+          story.actions.push(value);
         }
+        state.sequenceNumbers["story_actions"][value.id] = [
+          action.payload.sequence_number,
+          true,
+        ];
       }
-      const updatedKoboldConfigClass = R.mergeRight(
-        koboldConfig[action.payload.classname as keyof KoboldConfig] || {},
-        update[action.payload.classname as keyof KoboldConfig] || {}
-      );
-      const updatedKoboldConfig = R.mergeRight(koboldConfig, {
-        [action.payload.classname]: updatedKoboldConfigClass,
-      });
-      const updatedTimestamps = R.mergeDeepRight(timestamps, timestampUpdate);
-      return {
-        ...state,
-        koboldConfig: updatedKoboldConfig,
-        timestamps: updatedTimestamps,
-        loadState: {
-          prompt: isPromptUpdate ? true : loadState.prompt,
-          actions: isActionUpdate ? true : loadState.actions,
-        },
-        lastNodeCount: lastNodeCount ?? 0,
-        ownActions: updatedOwnActions,
-      } as ConfigState;
+
+      const koboldConfigUpdate: Partial<KoboldConfig> = {
+        [action.payload.classname]: R.mergeRight(
+          koboldConfig[action.payload.classname as keyof KoboldConfig] || {},
+          update[action.payload.classname as keyof KoboldConfig] || {}
+        ),
+      };
+
+      state.koboldConfig = R.mergeRight(koboldConfig, koboldConfigUpdate);
+      state.loadState = {
+        prompt: isPromptUpdate ? true : loadState.prompt,
+        actions: isActionUpdate ? true : loadState.actions,
+      };
+      return state;
     },
   },
 });
@@ -413,8 +357,7 @@ export const {
   updateReinsertQueue,
   updateKoboldVar,
   setNodeCount,
-  updateKoboldConfigTimestamp,
-  updateOwnActions,
+  updateLocalSequenceNumber,
   updatePendingInsertion,
   updatePendingRetry,
   updateReinsertHistory,

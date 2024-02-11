@@ -8,24 +8,47 @@ import { SocketApiContext } from "@/socketApi/SocketApiProvider";
 import { BiNotepad } from "react-icons/bi";
 import { VarToggle } from "../Forms/VarToggle";
 import { VarRange } from "../Forms/VarRange";
+import { updateLocalSequenceNumber } from "@/store/configSlice";
+import { getSequenceNumber } from "@/util/getSequenceNumber";
 
 export const Memory = () => {
   const dispatch = useDispatch();
   const socketApi = useContext(SocketApiContext);
-  const { memory, authornote, loadedFile } = useSelector((state: RootState) => {
-    return {
-      memory: state.config.koboldConfig.story?.memory || "",
-      authornote: state.config.koboldConfig.story?.authornote || "",
-      loadedFile: state.ui.sidebarState.loadedFile,
-    };
-  }, shallowEqual);
+  const { memory, authornote, loadedFile, sequenceNumbers } = useSelector(
+    (state: RootState) => {
+      return {
+        memory: state.config.koboldConfig.story?.memory || "",
+        authornote: state.config.koboldConfig.story?.authornote || "",
+        loadedFile: state.ui.sidebarState.loadedFile,
+        sequenceNumbers: state.config.sequenceNumbers,
+      };
+    },
+    shallowEqual
+  );
 
   useEffect(() => {
     if (!loadedFile) return;
+
+    const [memSequenceNumber] = getSequenceNumber(
+      "story_memory",
+      sequenceNumbers
+    );
+    const [authorNoteSequenceNumber] = getSequenceNumber(
+      "story_authornote",
+      sequenceNumbers
+    );
+
     if (loadedFile?.target === "memory") {
       socketApi?.varChange(
         "story_memory",
-        memory + (memory.length ? "\n\n" : "") + loadedFile.content
+        memory + (memory.length ? "\n\n" : "") + loadedFile.content,
+        memSequenceNumber + 1
+      );
+      dispatch(
+        updateLocalSequenceNumber({
+          key: "story_memory",
+          sequenceNumber: memSequenceNumber + 1,
+        })
       );
       dispatch(updateLoadedFile(null));
     }
@@ -33,11 +56,26 @@ export const Memory = () => {
     if (loadedFile?.target === "authornote") {
       socketApi?.varChange(
         "story_authornote",
-        authornote + (authornote.length ? "\n\n" : "") + loadedFile.content
+        authornote + (authornote.length ? "\n\n" : "") + loadedFile.content,
+        authorNoteSequenceNumber + 1
+      );
+      dispatch(
+        updateLocalSequenceNumber({
+          key: "story_authornote",
+          sequenceNumber: authorNoteSequenceNumber + 1,
+        })
       );
       dispatch(updateLoadedFile(null));
     }
-  }, [authornote, dispatch, loadedFile, memory, socketApi]);
+  }, [
+    authornote,
+    dispatch,
+    loadedFile,
+    memory,
+    socketApi,
+    sequenceNumbers.story_memory,
+    sequenceNumbers.story_authornote,
+  ]);
 
   return (
     <div className="flex-grow px-6 py-3">

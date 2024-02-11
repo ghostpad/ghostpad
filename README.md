@@ -53,7 +53,7 @@ or
 
 `play.bat --host`
 
-Upon running the appropriate play script, you can open [http://localhost:5000](http://localhost:5000) in your browser.  You can access KoboldAI UI2 through http://localhost:5000/new_ui and UI1 through http://localhost:5000/classic
+Upon running the appropriate play script, you can open [http://localhost:5050](http://localhost:5050) in your browser.  You can access KoboldAI UI2 through http://localhost:5050/new_ui and UI1 through http://localhost:5050/classic
 
 ### Voice Chat On Remote Hosts
 

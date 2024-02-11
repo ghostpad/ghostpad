@@ -22,6 +22,8 @@ import { RootState } from "@/store/store";
 import { SyncTextarea } from "@/components/Forms/SyncTextarea";
 import { WPPEditor } from "./WPPEditor";
 import { FaRobot } from "react-icons/fa6";
+import { updateLocalSequenceNumber } from "@/store/configSlice";
+import { getSequenceNumber } from "@/util/getSequenceNumber";
 
 export const WorldInfoCard = ({
   worldInfoEntry,
@@ -30,13 +32,16 @@ export const WorldInfoCard = ({
 }) => {
   const socketApi = useContext(SocketApiContext);
   const dispatch = useDispatch();
-  const { timestamps } = useSelector((state: RootState) => state.config);
+  const { sequenceNumbers } = useSelector((state: RootState) => state.config);
   const { hiddenEntries, loadedFile, isGeneratingWI } = useSelector(
     (state: RootState) => {
       return state.ui.sidebarState;
     }
   );
-  const timestamp = (timestamps["story"]?.["worldinfo"] as number) || 0;
+  const [sequenceNumber, isSynced] = getSequenceNumber(
+    "story_worldinfo",
+    sequenceNumbers
+  );
   const isHidden = hiddenEntries.includes(worldInfoEntry.uid);
   useEffect(() => {
     if (!loadedFile) return;
@@ -120,8 +125,8 @@ export const WorldInfoCard = ({
           )}
         </button>
         <SyncInput
-          timestamp={timestamp}
           value={worldInfoEntry.title}
+          isSynced={isSynced}
           className="flex-grow ml-2 font-semibold"
           inputClassname="input input-sm bg-transparent border-0 text-sm w-full"
           onChange={(evt) => {
@@ -133,6 +138,12 @@ export const WorldInfoCard = ({
                 name: evt.target.value,
               },
             });
+            dispatch(
+              updateLocalSequenceNumber({
+                key: "story_worldinfo",
+                sequenceNumber: sequenceNumber + 1,
+              })
+            );
           }}
         />
       </div>
@@ -140,7 +151,7 @@ export const WorldInfoCard = ({
         <div>
           <SyncInput
             className="my-2"
-            timestamp={timestamp}
+            isSynced={isSynced}
             value={worldInfoEntry.object_type || worldInfoEntry.wpp.type || ""}
             label="Type"
             onChange={(evt) => {
@@ -152,6 +163,12 @@ export const WorldInfoCard = ({
                   type: evt.target.value,
                 },
               });
+              dispatch(
+                updateLocalSequenceNumber({
+                  key: "story_worldinfo",
+                  sequenceNumber: sequenceNumber + 1,
+                })
+              );
             }}
           />
           <div className="flex mb-2">
@@ -165,6 +182,12 @@ export const WorldInfoCard = ({
                 constant: evt.target.value !== "wi",
                 type: evt.target.value,
               });
+              dispatch(
+                updateLocalSequenceNumber({
+                  key: "story_worldinfo",
+                  sequenceNumber: sequenceNumber + 1,
+                })
+              );
             }}
             value={worldInfoEntry.type}
           >
@@ -197,15 +220,21 @@ export const WorldInfoCard = ({
           </button>
           <div className="mt-4 flex">
             <SyncToggle
+              isSynced={isSynced}
               label="Use Traits"
               className="flex-1"
               value={worldInfoEntry.use_wpp}
-              timestamp={timestamp}
               onChange={(evt) => {
                 socketApi?.editWorldInfoEntry({
                   ...worldInfoEntry,
                   use_wpp: evt.target.checked,
                 });
+                dispatch(
+                  updateLocalSequenceNumber({
+                    key: "story_worldinfo",
+                    sequenceNumber: sequenceNumber + 1,
+                  })
+                );
               }}
             />
             <div className="flex flex-1">
@@ -224,6 +253,12 @@ export const WorldInfoCard = ({
                         format: evt.target.value as WPPFormat,
                       },
                     });
+                    dispatch(
+                      updateLocalSequenceNumber({
+                        key: "story_worldinfo",
+                        sequenceNumber: sequenceNumber + 1,
+                      })
+                    );
                   }}
                 >
                   <option value="W++">W++</option>
@@ -238,23 +273,35 @@ export const WorldInfoCard = ({
               <SyncInput
                 label="Primary Keywords (Comma Separated)"
                 value={worldInfoEntry.key.join(",")}
-                timestamp={timestamp}
+                isSynced={isSynced}
                 onChange={(evt) => {
                   socketApi?.editWorldInfoEntry({
                     ...worldInfoEntry,
                     key: evt.target.value.split(","),
                   });
+                  dispatch(
+                    updateLocalSequenceNumber({
+                      key: "story_worldinfo",
+                      sequenceNumber: sequenceNumber + 1,
+                    })
+                  );
                 }}
               />
               <SyncInput
                 label="Secondary Keywords (Comma Separated)"
                 value={worldInfoEntry.keysecondary.join(",")}
-                timestamp={timestamp}
+                isSynced={isSynced}
                 onChange={(evt) => {
                   socketApi?.editWorldInfoEntry({
                     ...worldInfoEntry,
                     keysecondary: evt.target.value.split(","),
                   });
+                  dispatch(
+                    updateLocalSequenceNumber({
+                      key: "story_worldinfo",
+                      sequenceNumber: sequenceNumber + 1,
+                    })
+                  );
                 }}
               />
             </div>
@@ -263,13 +310,19 @@ export const WorldInfoCard = ({
             <>
               <SyncTextarea
                 value={worldInfoEntry.manual_text}
-                timestamp={timestamp}
                 disabled={worldInfoEntry.use_wpp}
+                isSynced={isSynced}
                 onChange={(evt) => {
                   socketApi?.editWorldInfoEntry({
                     ...worldInfoEntry,
                     manual_text: evt.target.value,
                   });
+                  dispatch(
+                    updateLocalSequenceNumber({
+                      key: "story_worldinfo",
+                      sequenceNumber: sequenceNumber + 1,
+                    })
+                  );
                 }}
                 label="Text"
               />
@@ -336,6 +389,12 @@ export const WorldInfoCard = ({
 ${worldInfoEntry.manual_text}`,
                     use_wpp: false,
                   });
+                  dispatch(
+                    updateLocalSequenceNumber({
+                      key: "story_worldinfo",
+                      sequenceNumber: sequenceNumber + 1,
+                    })
+                  );
                 }}
                 disabled={!worldInfoEntry.use_wpp}
                 className="btn btn-sm btn-neutral w-full mb-4"
@@ -361,7 +420,8 @@ ${worldInfoEntry.manual_text}`,
                 </button>
               </div>
               <WPPEditor
-                timestamp={timestamp}
+                sequenceNumber={sequenceNumber}
+                isSynced={isSynced}
                 value={worldInfoEntry.wpp.attributes}
                 worldInfoEntry={worldInfoEntry}
               />
@@ -370,12 +430,18 @@ ${worldInfoEntry.manual_text}`,
 
           <SyncTextarea
             value={worldInfoEntry.comment}
-            timestamp={timestamp}
+            isSynced={isSynced}
             onChange={(evt) => {
               socketApi?.editWorldInfoEntry({
                 ...worldInfoEntry,
                 comment: evt.target.value,
               });
+              dispatch(
+                updateLocalSequenceNumber({
+                  key: "story_worldinfo",
+                  sequenceNumber: sequenceNumber + 1,
+                })
+              );
             }}
             label="Comment"
           />

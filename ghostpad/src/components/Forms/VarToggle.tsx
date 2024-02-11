@@ -1,16 +1,18 @@
 import { RootState } from "@/store/store";
 import { KoboldConfig } from "@/types/KoboldConfig";
 import { useContext } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { SocketApiContext } from "@/socketApi/SocketApiProvider";
 import { SyncToggle } from "./SyncInput";
 import { cx } from "classix";
+import { updateLocalSequenceNumber } from "@/store/configSlice";
+import { getSequenceNumber } from "@/util/getSequenceNumber";
 
 export const VarToggle = ({
   varName,
   label,
   title,
-  className
+  className,
 }: {
   varName: string;
   className?: string;
@@ -21,12 +23,13 @@ export const VarToggle = ({
   title?: string;
 }) => {
   const socketApi = useContext(SocketApiContext);
-  const { koboldConfig, timestamps } = useSelector(
+  const { koboldConfig, sequenceNumbers } = useSelector(
     (state: RootState) => state.config
   );
+  const dispatch = useDispatch();
+  const [sequenceNumber, isSynced] = getSequenceNumber(varName, sequenceNumbers);
   const [varCategory, ...varKeyParts] = varName.split("_");
   const varKey = varKeyParts.join("_");
-  const timestamp = (timestamps[varCategory]?.[varKey] as number) || 0;
   const value =
     (
       koboldConfig[varCategory as keyof KoboldConfig] as Record<
@@ -41,9 +44,19 @@ export const VarToggle = ({
       title={title}
       label={label}
       value={!!value}
-      timestamp={timestamp}
+      isSynced={isSynced}
       onChange={(evt) => {
-        socketApi?.debouncedVarChange(varName, evt.target.checked);
+        socketApi?.debouncedVarChange(
+          varName,
+          evt.target.checked,
+          sequenceNumber + 1
+        );
+        dispatch(
+          updateLocalSequenceNumber({
+            key: varName,
+            sequenceNumber: sequenceNumber + 1,
+          })
+        );
       }}
     />
   );

@@ -180,10 +180,7 @@ class model_backend(HFTorchInferenceModel):
         self.implementation = parameters['implementation'] if 'implementation' in parameters else "occam"
 
     def _load(self, save_model: bool, initial_load: bool) -> None:
-        try:
-            from hf_bleeding_edge import AutoModelForCausalLM
-        except ImportError:
-            from transformers import AutoModelForCausalLM
+        from transformers import AutoModelForCausalLM
 
         # Make model path the same as the model name to make this consistent
         # with the other loading method if it isn't a known model type. This
@@ -313,11 +310,7 @@ class model_backend(HFTorchInferenceModel):
         from gptq.bigcode import load_quant as bigcode_load_quant
         from gptq.mpt import load_quant as mpt_load_quant
 
-        try:
-            import hf_bleeding_edge
-            from hf_bleeding_edge import AutoModelForCausalLM
-        except ImportError:
-            from transformers import AutoModelForCausalLM
+        from transformers import AutoModelForCausalLM
 
         gptq_model, gptq_bits, gptq_groupsize, gptq_file, gptq_version = load_model_gptq_settings(location)
         v2_bias = False
@@ -377,11 +370,6 @@ class model_backend(HFTorchInferenceModel):
                     from auto_gptq import AutoGPTQForCausalLM
                 except ImportError:
                     raise RuntimeError(f"4-bit load failed. Model type {model_type} not supported in 4-bit")
-
-                # Monkey patch in hf_bleeding_edge to avoid having to trust remote code
-                auto_gptq.modeling._utils.AutoConfig = hf_bleeding_edge.AutoConfig
-                auto_gptq.modeling._base.AutoConfig = hf_bleeding_edge.AutoConfig
-                auto_gptq.modeling._base.AutoModelForCausalLM = hf_bleeding_edge.AutoModelForCausalLM
 
                 autogptq_failed = False 
                 try:

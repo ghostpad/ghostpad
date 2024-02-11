@@ -3,11 +3,15 @@ import { useContext, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { closeModal, openModal } from "@/store/uiSlice";
 import { SocketApiContext } from "@/socketApi/SocketApiProvider";
+import { updateLocalSequenceNumber } from "@/store/configSlice";
+import { getSequenceNumber } from "@/util/getSequenceNumber";
 
 export const SaveStoryModal = () => {
-  const storyConfig = useSelector((state: RootState) => {
-    return state.config.koboldConfig.story;
+  const { koboldConfig, sequenceNumbers } = useSelector((state: RootState) => {
+    return state.config;
   });
+  const storyConfig = koboldConfig.story;
+  const [sequenceNumber] = getSequenceNumber('story_story_name', sequenceNumbers);
   const modalState = useSelector((state: RootState) => {
     return state.ui.modalState;
   });
@@ -27,7 +31,17 @@ export const SaveStoryModal = () => {
               type="text"
               onChange={(e) => {
                 setNewName(e.target.value);
-                socketApi?.varChange("story_story_name", e.target.value);
+                socketApi?.varChange(
+                  "story_story_name",
+                  e.target.value,
+                  sequenceNumber + 1
+                );
+                dispatch(
+                  updateLocalSequenceNumber({
+                    key: "story_story_name",
+                    sequenceNumber: sequenceNumber + 1,
+                  })
+                );
               }}
               className="input input-bordered w-full"
               placeholder="Story Name"

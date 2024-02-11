@@ -2,24 +2,23 @@ import { ChangeEvent, InputHTMLAttributes, useState } from "react";
 
 export const SyncInput = ({
   value,
-  timestamp,
   onChange,
   className,
   label,
   title,
   inputClassname,
+  isSynced,
   ...args
 }: Omit<InputHTMLAttributes<HTMLInputElement>, "onChange"> & {
   value: string | number;
-  timestamp: number;
   label?: string;
   title?: string;
   inputClassname?: string;
+  isSynced: boolean;
   onChange?: (evt: ChangeEvent<HTMLInputElement>, localValue: string) => void;
 }) => {
   const [localValue, setLocalValue] = useState(value);
-  const [localTimestamp, setLocalTimestamp] = useState<number>(0);
-  const displayedValue = timestamp > localTimestamp + 500 ? value : localValue;
+  const displayedValue = isSynced ? value : localValue;
   return (
     <div className={className} title={title}>
       {label && (
@@ -33,10 +32,11 @@ export const SyncInput = ({
         onChange={(evt: ChangeEvent<HTMLInputElement>) => {
           onChange?.(evt, localValue as string);
           setLocalValue(evt.target.value);
-          const localTimestamp = Date.now();
-          setLocalTimestamp(localTimestamp);
         }}
-        className={inputClassname || "input input-sm input-bordered bg-base-200 text-sm w-full placeholder:italic"}
+        className={
+          inputClassname ||
+          "input input-sm input-bordered bg-base-200 text-sm w-full placeholder:italic"
+        }
         {...args}
       />
     </div>
@@ -47,24 +47,21 @@ export const SyncInput = ({
 // For the sake of simplicity, Ghostpad uses a single element array ["comma,separated,values"] which results in exactly the same input to the AI.
 export const SyncArrayInput = ({
   value,
-  timestamp,
   onChange,
   className,
   label,
   title,
+  isSynced,
   ...args
 }: Omit<InputHTMLAttributes<HTMLInputElement>, "onChange"> & {
-  timestamp: number;
   value: string[];
   label?: string;
   title?: string;
+  isSynced: boolean;
   onChange?: (evt: ChangeEvent<HTMLInputElement>, localValue: string[]) => void;
 }) => {
   const [localValue, setLocalValue] = useState(value);
-  const [localTimestamp, setLocalTimestamp] = useState<number>(0);
-  const displayedValue = (timestamp > localTimestamp + 500 ? value : localValue).join(
-    ", "
-  );
+  const displayedValue = (isSynced ? value : localValue).join(", ");
   return (
     <div className={className} title={title}>
       {label && (
@@ -78,8 +75,6 @@ export const SyncArrayInput = ({
         onChange={(evt: ChangeEvent<HTMLInputElement>) => {
           onChange?.(evt, localValue);
           setLocalValue([evt.target.value]);
-          const localTimestamp = Date.now();
-          setLocalTimestamp(localTimestamp);
         }}
         className="input input-sm input-bordered bg-base-200 text-sm w-full placeholder:italic"
         {...args}
@@ -90,22 +85,21 @@ export const SyncArrayInput = ({
 
 export const SyncToggle = ({
   value,
-  timestamp,
   onChange,
   className,
   label,
   title,
+  isSynced,
   ...args
 }: Omit<InputHTMLAttributes<HTMLInputElement>, "onChange" | "value"> & {
-  timestamp: number;
   value: boolean;
+  isSynced: boolean;
   label?: string;
   title?: string;
   onChange?: (evt: ChangeEvent<HTMLInputElement>, localValue: boolean) => void;
 }) => {
   const [localValue, setLocalValue] = useState(value);
-  const [localTimestamp, setLocalTimestamp] = useState<number>(0);
-  const displayedValue = timestamp > localTimestamp + 500 ? value : localValue;
+  const displayedValue = isSynced ? value : localValue;
   return (
     <div className={className} title={title}>
       {label && (
@@ -119,8 +113,6 @@ export const SyncToggle = ({
         onChange={(evt: ChangeEvent<HTMLInputElement>) => {
           onChange?.(evt, localValue);
           setLocalValue(evt.target.checked);
-          const localTimestamp = Date.now();
-          setLocalTimestamp(localTimestamp);
         }}
         className="toggle mb-2"
         {...args}
