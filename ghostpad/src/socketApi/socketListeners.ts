@@ -15,7 +15,6 @@ import {
 } from "../store/uiSlice";
 import { MsgSelectedModelInfo } from "@/types/MsgSelectedModelInfo";
 import { store } from "@/store/store";
-import { Action } from "@/types/Action";
 import { MsgLoadPopup } from "@/types/MsgLoadPopup";
 import { WorldInfoEntry, WorldInfoFolders } from "@/types/WorldInfo";
 import {
@@ -27,6 +26,8 @@ import {
 } from "../store/worldInfoSlice";
 import { StoryCommentary } from "@/types/StoryCommentary";
 import { editWorldInfoEntry } from "./editWorldInfoEntry";
+import { Action } from "@/types/Action";
+import { getSequenceNumber } from "@/util/getSequenceNumber";
 
 export const registerSocketListeners = (
   dispatch: Dispatch<AnyAction>,
@@ -62,20 +63,22 @@ export const registerSocketListeners = (
     dispatch(resetWorldInfo());
   });
   socket?.on("var_changed", (data: MsgVarChanged) => {
-    const [dateStr, microsecondsStr] = data.transmit_time.split(".");
+    const sequenceNumbers = store.getState().config.sequenceNumbers;
     const isActionUpdate =
       data.classname === "story" && data.name === "actions";
-    const koboldConfigTimestamp =
-      Date.parse(dateStr) + parseInt(microsecondsStr) / 1000;
-    // The timestamp of each config item is always `timestamps[classname][name]: number`
-    // ...except for actions, which are tracked individually as `timestamps.story.actions[id]: number`
-    const { timestamps } = store.getState().config;
-    const lastTimestamp = isActionUpdate
-      ? timestamps.story?.actions?.[(data.value as Action).id]
-      : (timestamps[data.classname]?.[data.name] as number);
-    if (koboldConfigTimestamp < (lastTimestamp || 0)) {
-      return;
+    let sequenceNumber;
+    if (isActionUpdate) {
+      const actionValue = data.value as Action;
+      [sequenceNumber] =
+        "id" in actionValue
+          ? getSequenceNumber("story_actions", sequenceNumbers, actionValue.id)
+          : [0];
+    } else {
+      const sequenceNumberKey = `${data.classname}_${data.name}`;
+      [sequenceNumber] = getSequenceNumber(sequenceNumberKey, sequenceNumbers);
     }
+    if (sequenceNumber > data.sequence_number) return;
+
     dispatch(updateKoboldVar(data));
   });
   socket?.on("show_options", () => {

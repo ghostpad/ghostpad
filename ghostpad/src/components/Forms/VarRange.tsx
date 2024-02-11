@@ -1,8 +1,10 @@
 import { ChangeEvent, useContext, useState } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { KoboldConfig } from "@/types/KoboldConfig";
 import { SocketApiContext } from "@/socketApi/SocketApiProvider";
+import { updateLocalSequenceNumber } from "@/store/configSlice";
+import { getSequenceNumber } from "@/util/getSequenceNumber";
 
 export const VarRange = ({
   varName,
@@ -10,7 +12,7 @@ export const VarRange = ({
   max,
   step,
   label,
-  title
+  title,
 }: {
   varName: string;
   min?: number;
@@ -20,19 +22,19 @@ export const VarRange = ({
   title?: string;
 }) => {
   const socketApi = useContext(SocketApiContext);
-  const { koboldConfig, timestamps } = useSelector(
+  const { koboldConfig, sequenceNumbers } = useSelector(
     (state: RootState) => state.config
   );
+  const dispatch = useDispatch();
+  const [sequenceNumber, isSynced] = getSequenceNumber(varName, sequenceNumbers);
   const [varCategory, ...varKeyParts] = varName.split("_");
   const varKey = varKeyParts.join("_");
-  const timestamp = (timestamps[varCategory]?.[varKey] as number) || 0;
   const value =
     (
       koboldConfig[varCategory as keyof KoboldConfig] as Record<string, number>
     )?.[varKey] || 0;
   const [localValue, setLocalValue] = useState<number>(value);
-  const [localTimestamp, setLocalTimestamp] = useState<number>(0);
-  const displayedValue = timestamp > localTimestamp ? value : localValue;
+  const displayedValue = isSynced ? value : localValue;
   return (
     <div className="p-2 flex-grow min-w-1/2" title={title}>
       <div className="flex justify-between mb-2">
@@ -47,9 +49,13 @@ export const VarRange = ({
         value={displayedValue}
         onChange={(evt: ChangeEvent<HTMLInputElement>) => {
           setLocalValue(evt.target.valueAsNumber);
-          const localTimestamp = Date.now();
-          setLocalTimestamp(localTimestamp);
-          socketApi?.debouncedVarChange(varName, evt.target.value);
+          socketApi?.debouncedVarChange(varName, evt.target.value, sequenceNumber + 1);
+          dispatch(
+            updateLocalSequenceNumber({
+              key: varName,
+              sequenceNumber: sequenceNumber + 1,
+            })
+          );
         }}
         className="range range-primary"
       />

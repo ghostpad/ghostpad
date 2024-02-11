@@ -1,9 +1,5 @@
 import { Action } from "./Action";
-export type Timestamps = {
-  [key: string]: {
-    [key: string]: number;
-  };
-};
+
 export type Prompt = {
   text: string;
   "WI matches": unknown;

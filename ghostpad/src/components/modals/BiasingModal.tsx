@@ -1,51 +1,23 @@
-import { ChangeEvent, useContext, useEffect, useState } from "react";
+import { ChangeEvent, useContext, useEffect } from "react";
 import { shallowEqual, useDispatch, useSelector } from "react-redux";
 import { SocketContext } from "../SocketProvider";
 import { RootState } from "@/store/store";
 import { closeModal, updateLocalBiases } from "@/store/uiSlice";
 import { BiX } from "react-icons/bi";
 import { koboldConfigMiddleware } from "@/store/koboldConfigMiddleware";
-import { updateKoboldVar } from "@/store/configSlice";
+import {
+  updateKoboldVar,
+  updateLocalSequenceNumber,
+} from "@/store/configSlice";
 import { SocketApi, SocketApiContext } from "@/socketApi/SocketApiProvider";
-
-// We use a different internal data structure for biases than in Kobold.
-// Kobold stores biases as tuples in an object with the phrase as the key. { [phrase: string]: [bias: number, completionThreshold: number] }
-// But we want to be able to temporarily store biases containing duplicate phrases, so items don't disappear during typing the moment they have a key collision.
-export type LocalBias = {
-  phrase: string;
-  bias: number;
-  completionThreshold: number;
-};
-
-export type LocalBiases = LocalBias[];
-
-export type RemoteBiases = {
-  [key: string]: [number, number];
-};
-
-export const localToRemoteBiases = (localBiases: LocalBiases): RemoteBiases => {
-  return localBiases.reduce(
-    (acc: RemoteBiases, localBias) =>
-      localBias.phrase.length
-        ? {
-            ...acc,
-            [localBias.phrase]: [localBias.bias, localBias.completionThreshold],
-          }
-        : acc,
-    {}
-  );
-};
-
-export const remoteToLocalBiases = (remoteBiases: RemoteBiases): LocalBiases =>
-  remoteBiases
-    ? Object.entries(remoteBiases).map(
-        ([phrase, [bias, completionThreshold]]) => ({
-          phrase,
-          bias,
-          completionThreshold,
-        })
-      )
-    : [];
+import {
+  LocalBias,
+  LocalBiases,
+  RemoteBiases,
+  localToRemoteBiases,
+  remoteToLocalBiases,
+} from "@/util/biases";
+import { getSequenceNumber } from "@/util/getSequenceNumber";
 
 const BiasListItem = ({
   phrase,
@@ -111,25 +83,31 @@ const BiasListItem = ({
     </li>
   );
 };
-const syncBiases = (localBiases: LocalBiases, socketApi: SocketApi) => {
-  socketApi?.phraseBiasUpdate(localToRemoteBiases(localBiases));
+const syncBiases = (
+  localBiases: LocalBiases,
+  sequenceNumber: number,
+  socketApi: SocketApi
+) => {
+  socketApi?.phraseBiasUpdate(localToRemoteBiases(localBiases), sequenceNumber);
 };
 
 export const BiasingModal = () => {
   const { socket } = useContext(SocketContext);
   const socketApi = useContext(SocketApiContext);
   const dispatch = useDispatch();
-  const [localTimestamp, setLocalTimestamp] = useState<number | null>(null);
-  const { modalState, timestamps, biases, localBiases } = useSelector(
-    (state: RootState) => {
-      return {
-        timestamps: state.config.timestamps,
-        modalState: state.ui.modalState,
-        biases: state.config.koboldConfig.story?.biases as RemoteBiases,
-        localBiases: state.ui.localBiases,
-      };
-    },
-    shallowEqual
+  const { koboldConfig, sequenceNumbers } = useSelector((state: RootState) => {
+    return state.config;
+  });
+  const biases = koboldConfig.story?.biases as RemoteBiases;
+  const { modalState, localBiases } = useSelector((state: RootState) => {
+    return {
+      modalState: state.ui.modalState,
+      localBiases: state.ui.localBiases as LocalBiases,
+    };
+  }, shallowEqual);
+  const [sequenceNumber, isSynced] = getSequenceNumber(
+    "story_biases",
+    sequenceNumbers
   );
   useEffect(() => {
     const removeBiasUpdateListener = koboldConfigMiddleware.startListening({
@@ -139,29 +117,25 @@ export const BiasingModal = () => {
           action.payload.classname === "story" &&
           action.payload.name === "biases"
         ) {
-          const remoteTimestamp = (timestamps.story?.biases as number) ?? 0;
-
-          const remoteIsNewest = remoteTimestamp >= (localTimestamp || 0);
-          if (remoteIsNewest) {
-            const updatedBiases = remoteToLocalBiases(
-              action.payload.value as RemoteBiases
+          const updatedBiases = remoteToLocalBiases(
+            action.payload.value as RemoteBiases
+          );
+          const localDrafts: { bias: LocalBias; idx: number }[] =
+            localBiases.reduce<{ bias: LocalBias; idx: number }[]>(
+              (drafts: { bias: LocalBias; idx: number }[], bias, idx) => {
+                if (bias.phrase === "") {
+                  drafts.push({ bias, idx });
+                }
+                return drafts;
+              },
+              []
             );
-            const localDrafts = localBiases.reduce<
-              { bias: LocalBias; idx: number }[]
-            >((drafts, bias, idx) => {
-              if (bias.phrase === "") {
-                drafts.push({ bias, idx });
-              }
-              return drafts;
-            }, []);
 
-            localDrafts.forEach(({ bias, idx }) => {
-              updatedBiases.splice(idx, 0, bias);
-            });
+          localDrafts.forEach(({ bias, idx }) => {
+            updatedBiases.splice(idx, 0, bias);
+          });
 
-            dispatch(updateLocalBiases(updatedBiases));
-            setLocalTimestamp(Date.now());
-          }
+          dispatch(updateLocalBiases(updatedBiases));
         }
       },
     });
@@ -169,7 +143,7 @@ export const BiasingModal = () => {
     return () => {
       removeBiasUpdateListener();
     };
-  }, [biases, dispatch, localBiases, localTimestamp, timestamps.story?.biases]);
+  }, [biases, dispatch, localBiases, isSynced]);
   if (!socket || !modalState.biasing.active) return null;
 
   return (
@@ -200,14 +174,24 @@ export const BiasingModal = () => {
                       );
                     }
                     dispatch(updateLocalBiases(newBiases));
-                    setLocalTimestamp(Date.now());
-                    syncBiases(newBiases, socketApi);
+                    dispatch(
+                      updateLocalSequenceNumber({
+                        key: "story_biases",
+                        sequenceNumber: sequenceNumber + 1,
+                      })
+                    );
+                    syncBiases(newBiases, sequenceNumber + 1, socketApi);
                   }}
                   onClose={() => {
                     const newBiases = localBiases.filter((_, i) => i !== idx);
                     dispatch(updateLocalBiases(newBiases));
-                    setLocalTimestamp(Date.now());
-                    syncBiases(newBiases, socketApi);
+                    dispatch(
+                      updateLocalSequenceNumber({
+                        key: "story_biases",
+                        sequenceNumber: sequenceNumber + 1,
+                      })
+                    );
+                    syncBiases(newBiases, sequenceNumber + 1, socketApi);
                   }}
                   key={idx}
                   {...bias}
@@ -233,7 +217,6 @@ export const BiasingModal = () => {
                     { phrase: "", bias: 0, completionThreshold: 10 },
                   ])
                 );
-                setLocalTimestamp(Date.now());
               }}
               className="btn btn-primary"
             >

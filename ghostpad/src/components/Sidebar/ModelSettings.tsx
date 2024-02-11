@@ -8,12 +8,10 @@ import { VarToggle } from "../Forms/VarToggle";
 import { VarRange } from "../Forms/VarRange";
 import { SocketApiContext } from "@/socketApi/SocketApiProvider";
 import { VarInput } from "../Forms/VarInput";
+import { updateLocalSequenceNumber } from "@/store/configSlice";
+import { getSequenceNumber } from "@/util/getSequenceNumber";
 
-const PresetOption = ({
-  preset,
-}: {
-  preset: Preset;
-}) => (
+const PresetOption = ({ preset }: { preset: Preset }) => (
   <>
     <option>{preset.preset}</option>
     {preset.description && (
@@ -25,8 +23,12 @@ const PresetOption = ({
 );
 
 const ModelSettings = () => {
-  const { koboldConfig } = useSelector(
+  const { koboldConfig, sequenceNumbers } = useSelector(
     (state: RootState) => state.config
+  );
+  const [sequenceNumber] = getSequenceNumber(
+    "model_selected_preset",
+    sequenceNumbers
   );
   const presets = koboldConfig.model?.presets;
   const selectedPreset = koboldConfig.model?.selected_preset;
@@ -54,7 +56,17 @@ const ModelSettings = () => {
         <select
           value={selectedPreset}
           onChange={(evt) => {
-            socketApi?.varChange("model_selected_preset", evt.target.value);
+            socketApi?.varChange(
+              "model_selected_preset",
+              evt.target.value,
+              sequenceNumber + 1
+            );
+            dispatch(
+              updateLocalSequenceNumber({
+                key: "model_selected_preset",
+                sequenceNumber: sequenceNumber + 1,
+              })
+            );
           }}
           className="select select-bordered bg-base-200 w-full"
         >
@@ -64,10 +76,7 @@ const ModelSettings = () => {
                 ‣ Recommended
               </option>
               {sortedPresets.Recommended?.map((preset) => (
-                <PresetOption
-                  key={preset.preset}
-                  preset={preset}
-                />
+                <PresetOption key={preset.preset} preset={preset} />
               ))}
             </>
           )}
@@ -77,10 +86,7 @@ const ModelSettings = () => {
                 ‣ Same Class
               </option>
               {sortedPresets["Same Class"]?.map((preset) => (
-                <PresetOption
-                  key={preset.preset}
-                  preset={preset}
-                />
+                <PresetOption key={preset.preset} preset={preset} />
               ))}
             </>
           )}
@@ -90,10 +96,7 @@ const ModelSettings = () => {
                 ‣ Other
               </option>
               {sortedPresets.Other?.map((preset) => (
-                <PresetOption
-                  key={preset.preset}
-                  preset={preset}
-                />
+                <PresetOption key={preset.preset} preset={preset} />
               ))}
             </>
           )}

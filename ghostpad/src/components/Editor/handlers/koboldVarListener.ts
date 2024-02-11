@@ -17,7 +17,6 @@ export const koboldVarListener = (
   const {
     koboldConfig: config,
     reinsertQueue,
-    timestamps,
   }: ConfigState = store.getState().config;
 
   const isActionUpdate =
@@ -43,6 +42,6 @@ export const koboldVarListener = (
   if (isActionUpdate) {
     handleActionUpdate(action, editor);
   } else if (isPromptUpdate) {
-    handlePromptUpdate(config, timestamps, editor);
+    handlePromptUpdate(config, editor);
   }
 };

@@ -8,10 +8,7 @@
  *
  */
 
-import type { LexicalCommand,
-  // LexicalEditor,
-  // RangeSelection 
-} from "lexical";
+import type { LexicalCommand } from "lexical";
 
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
@@ -104,7 +101,7 @@ function SpeechToTextPlugin(): null {
           // } else if (transcript.match(/\s*\n\s*/)) {
           //   selection.insertParagraph();
           // } else {
-          socketApi?.submit(transcript+ "\n");
+          socketApi?.submit(transcript + "\n");
           // }
         }
       });
@@ -132,7 +129,14 @@ function SpeechToTextPlugin(): null {
       recognition.current?.removeEventListener("result", resultListener);
       recognition.current = null;
     };
-  }, [SpeechRecognition, editor, isEnabled, report, utteranceInProgress, socketApi]);
+  }, [
+    SpeechRecognition,
+    editor,
+    isEnabled,
+    report,
+    utteranceInProgress,
+    socketApi,
+  ]);
   useEffect(() => {
     return editor.registerCommand(
       SPEECH_TO_TEXT_COMMAND,

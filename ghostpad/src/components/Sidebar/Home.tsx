@@ -10,6 +10,7 @@ import { HomeSubsection } from "@/types/HomeSection";
 import { VarInput } from "../Forms/VarInput";
 import { MenuItem } from "./MenuItem";
 import { NavMenuItem } from "./NavMenuItem";
+import { getSequenceNumber } from "@/util/getSequenceNumber";
 
 const Home = () => {
   const selectedSubsection = useSelector(
@@ -28,30 +29,43 @@ const Home = () => {
 
 const MainMenu = () => {
   const dispatch = useDispatch();
-  const koboldConfig = useSelector((state: RootState) => {
-    return state.config.koboldConfig;
+  const { koboldConfig, sequenceNumbers } = useSelector((state: RootState) => {
+    return state.config;
   });
 
   const socketApi = useContext(SocketApiContext);
   const storyModes = ["Story", "Adventure", "Chat"];
   const [modeChangePending, setModeChangePending] = useState(false);
 
+  const [storyModeSequenceNumber] = getSequenceNumber('story_storymode', sequenceNumbers);
+  const [actionModeSequenceNumber] = getSequenceNumber('story_actionmode', sequenceNumbers);
+
   const handleModeChange = () => {
     if (modeChangePending) return;
     setModeChangePending(true);
     if (typeof koboldConfig.story?.storymode !== "number") return;
     const nextMode = (koboldConfig.story?.storymode + 1) % 3;
-    socketApi?.varChangeWithCallback("story_storymode", nextMode, () => {
-      // In adventure mode in Kobold, you can choose between story or adventure style input
-      // I don't want to have modes within modes, so adventure mode will always be adventure style input
-      if (nextMode === 1) {
-        socketApi?.varChangeWithCallback("story_actionmode", 1, () => {
+    socketApi?.varChangeWithCallback(
+      "story_storymode",
+      nextMode,
+      storyModeSequenceNumber + 1,
+      () => {
+        // In adventure mode in Kobold, you can choose between story or adventure style input
+        // I don't want to have modes within modes, so adventure mode will always be adventure style input
+        if (nextMode === 1) {
+          socketApi?.varChangeWithCallback(
+            "story_actionmode",
+            1,
+            actionModeSequenceNumber + 1,
+            () => {
+              setModeChangePending(false);
+            }
+          );
+        } else {
           setModeChangePending(false);
-        });
-      } else {
-        setModeChangePending(false);
+        }
       }
-    });
+    );
   };
 
   const tokensInUse = koboldConfig.story?.context.reduce(

@@ -1,25 +1,25 @@
 import {
   ConfigState,
   setNodeCount,
-  updateOwnActions,
+  updateLocalSequenceNumber,
 } from "@/store/configSlice";
 import { store } from "@/store/store";
 import { $getSelection, $nodesOfType, EditorState } from "lexical";
 import { ActionNode } from "../ActionNode";
 import { $isStoryNode } from "../StoryNode";
 import { SocketApi } from "@/socketApi/SocketApiProvider";
+import { getSequenceNumber } from "@/util/getSequenceNumber";
 
 const onChange = (socketApi: SocketApi) => (editorState: EditorState) => {
   const {
     koboldConfig: config,
     lastNodeCount,
     loadState,
+    sequenceNumbers,
   }: ConfigState = store.getState().config;
   if (config.system?.aibusy) return;
   const actions = config.story?.actions || [];
-  const contentfulActions = actions.filter(
-    (action) => action?.action["Selected Text"].length
-  );
+  const [promptSequenceNumber] = getSequenceNumber('story_prompt_wi_highlighted_text', sequenceNumbers);
   const promptText = config.story?.prompt_wi_highlighted_text?.[0]?.text || "";
   editorState.read(() => {
     const selection = $getSelection();
@@ -50,47 +50,72 @@ const onChange = (socketApi: SocketApi) => (editorState: EditorState) => {
           if (step === -1 && isStart) continue;
 
           const node = actionNodes[i];
+          const nodeId = node?.getActionId();
+          const action = actions.find((action) => action.id === nodeId);
           const text = node?.getLatest()?.getTextContent() || "";
 
           if (i === 0) {
             // We just reloaded/cleared the story and haven't set the prompt yet, skip
             if (!loadState.prompt) continue;
             if (text !== promptText) {
-              const { ownActions }: ConfigState = store.getState().config;
-              store.dispatch(
-                updateOwnActions([
-                  ...ownActions,
-                  { id: undefined, text: text, timestamp: Date.now() },
-                ])
+              socketApi?.varChange(
+                "story_prompt",
+                text,
+                promptSequenceNumber + 1
               );
-              socketApi?.varChange("story_prompt", text);
+              store.dispatch(
+                updateLocalSequenceNumber({
+                  key: "story_prompt_wi_highlighted_text",
+                  sequenceNumber: promptSequenceNumber + 1,
+                })
+              );
             }
           } else {
             // We just reloaded/cleared the story and haven't set the actions array yet, skip
             if (!actions.length) continue;
             // Check actions for changes
-            const actionId =
-              contentfulActions[i - 1]?.id ?? node?.getActionId();
-            const lastSyncedActionText =
-              contentfulActions[i - 1]?.action?.["Selected Text"];
+            const actionId = action?.id;
+            const lastSyncedActionText = action?.action["Selected Text"];
             // No change found, break out of the loop
-            if (text.length && text === lastSyncedActionText && !isStart) break;
+            if (text.length && text === lastSyncedActionText && !isStart) {
+              break;
+            }
             if (
               typeof lastSyncedActionText !== "undefined" &&
               text !== lastSyncedActionText
             ) {
-              // Change found, update the store and send the change to the server
-              const { ownActions }: ConfigState = store.getState().config;
-              store.dispatch(
-                updateOwnActions([
-                  ...ownActions,
-                  { id: actionId, text: text, timestamp: Date.now() },
-                ])
+              const [sequenceNumber] = getSequenceNumber('story_actions', sequenceNumbers, actionId);
+              socketApi?.setSelectedText(
+                actionId as number,
+                text,
+                sequenceNumber + 1
               );
-              socketApi?.setSelectedText(actionId as number, text);
+              store.dispatch(
+                updateLocalSequenceNumber({
+                  key: "story_actions",
+                  sequenceNumber: sequenceNumber + 1,
+                  actionId,
+                })
+              );
             }
           }
         }
+      });
+    }
+    const deletedActions = new Set(
+      actions
+        .filter(
+          (action) =>
+            !actionNodes.find(
+              (actionNode) => actionNode.getActionId() === action.id
+            ) && action.action["Selected Text"].length > 0
+        )
+        .map((action) => action.id)
+    );
+    if (deletedActions.size && loadState.actions && loadState.prompt) {
+      deletedActions.forEach((id) => {
+        const [sequenceNumber] = getSequenceNumber('story_actions', sequenceNumbers, id);
+        socketApi?.setSelectedText(id, "", sequenceNumber);
       });
     }
     store.dispatch(setNodeCount(actionNodes.length));

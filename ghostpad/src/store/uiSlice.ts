@@ -1,4 +1,4 @@
-import { LocalBias, LocalBiases } from "@/components/modals/BiasingModal";
+import { LocalBias, LocalBiases } from "@/util/biases";
 import { LibraryItem } from "@/components/modals/LoadFromLibraryModal";
 import { HomeSubsection } from "@/types/HomeSection";
 import { Substitution } from "@/types/KoboldConfig";

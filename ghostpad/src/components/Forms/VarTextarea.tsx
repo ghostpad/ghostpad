@@ -1,36 +1,48 @@
 import { useContext } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { KoboldConfig } from "@/types/KoboldConfig";
 import { SocketApiContext } from "@/socketApi/SocketApiProvider";
 import { SyncTextarea } from "./SyncTextarea";
+import { updateLocalSequenceNumber } from "@/store/configSlice";
+import { getSequenceNumber } from "@/util/getSequenceNumber";
 
 export const VarTextarea = ({
   varName,
   label,
-  title
+  title,
 }: {
   varName: string;
   label?: string;
   title?: string;
 }) => {
   const socketApi = useContext(SocketApiContext);
-  const { koboldConfig, timestamps } = useSelector(
+  const { koboldConfig, sequenceNumbers } = useSelector(
     (state: RootState) => state.config
   );
+  const dispatch = useDispatch();
+  const [sequenceNumber, isSynced] = getSequenceNumber(varName, sequenceNumbers);
   const [varCategory, ...varKeyParts] = varName.split("_");
   const varKey = varKeyParts.join("_");
-  const timestamp = (timestamps[varCategory]?.[varKey] as number) || 0;
   const value =
     (
-      koboldConfig[varCategory as keyof KoboldConfig] as Record<string, string | number>
+      koboldConfig[varCategory as keyof KoboldConfig] as Record<
+        string,
+        string | number
+      >
     )?.[varKey] || "";
   return (
     <SyncTextarea
       value={value as string}
-      timestamp={timestamp}
+      isSynced={isSynced}
       onChange={(evt) => {
-          socketApi?.varChange(varName, evt.target.value);
+        socketApi?.varChange(varName, evt.target.value, sequenceNumber + 1);
+        dispatch(
+          updateLocalSequenceNumber({
+            key: varName,
+            sequenceNumber: sequenceNumber + 1,
+          })
+        );
       }}
       label={label}
       title={title}

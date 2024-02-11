@@ -12,7 +12,6 @@ import { MsgVarChanged } from "@/types/MsgVarChanged";
 import { LexicalEditor, $nodesOfType, TextNode } from "lexical";
 import { ActionNode } from "../ActionNode";
 import { Dispatch } from "@reduxjs/toolkit";
-import { appendNewActionNode } from "@/util/appendNewActionNode";
 import { store } from "@/store/store";
 
 export const handleAiBusyChange = (
@@ -117,15 +116,9 @@ export const handleAiBusyChange = (
       }
       reinsertQueue.forEach((queueItem) => {
         // Add the queued up text back to the story.
-        const existingTargetNode = $nodesOfType(ActionNode).find(
-          (node) => node.getActionId() === queueItem.key
-        );
-        if (!existingTargetNode) {
-          appendNewActionNode(queueItem.key, queueItem.text);
-        } else {
+        const existingTargetNode = $nodesOfType(ActionNode).pop()
           const textNode = new TextNode(queueItem.text);
-          existingTargetNode.append(textNode);
-        }
+          existingTargetNode?.append(textNode);
       });
       dispatch(updateReinsertQueue([]));
     } else {

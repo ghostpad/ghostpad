@@ -1,9 +1,11 @@
 import { useContext } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { KoboldConfig } from "@/types/KoboldConfig";
 import { SocketApiContext } from "@/socketApi/SocketApiProvider";
 import { SyncArrayInput, SyncInput } from "./SyncInput";
+import { updateLocalSequenceNumber } from "@/store/configSlice";
+import { getSequenceNumber } from "@/util/getSequenceNumber";
 
 export const VarInput = ({
   varName,
@@ -18,11 +20,12 @@ export const VarInput = ({
   type?: string;
   syncOnBlur?: boolean;
 }) => {
-  const timestamps = useSelector((state: RootState) => state.config.timestamps);
   const socketApi = useContext(SocketApiContext);
-  const koboldConfig = useSelector(
-    (state: RootState) => state.config.koboldConfig
+  const { koboldConfig, sequenceNumbers } = useSelector(
+    (state: RootState) => state.config
   );
+  const dispatch = useDispatch();
+  const [sequenceNumber, isSynced] = getSequenceNumber(varName, sequenceNumbers);
   const [varCategory, ...varKeyParts] = varName.split("_");
   const varKey = varKeyParts.join("_");
   const value =
@@ -32,7 +35,6 @@ export const VarInput = ({
         string | string[] | number
       >
     )?.[varKey] || "";
-  const timestamp = timestamps[varCategory]?.[varKey] as number;
 
   const arrayType = Array.isArray(value);
   if (!["string", "number"].includes(typeof value) && !arrayType)
@@ -44,16 +46,22 @@ export const VarInput = ({
       label={label}
       value={value}
       type={type}
-      timestamp={timestamp}
+      isSynced={isSynced}
       onBlur={(evt) => {
         if (syncOnBlur) {
-          socketApi?.varChange(varName, [evt.target.value]);
+          socketApi?.varChange(varName, [evt.target.value], sequenceNumber + 1);
         }
       }}
       onChange={(evt) => {
         if (!syncOnBlur) {
-          socketApi?.varChange(varName, [evt.target.value]);
+          socketApi?.varChange(varName, [evt.target.value], sequenceNumber + 1);
         }
+        dispatch(
+          updateLocalSequenceNumber({
+            key: varName,
+            sequenceNumber: sequenceNumber + 1,
+          })
+        );
       }}
     />
   ) : (
@@ -63,16 +71,22 @@ export const VarInput = ({
       title={title}
       value={value}
       type={type}
-      timestamp={timestamp}
+      isSynced={isSynced}
       onBlur={(evt) => {
         if (syncOnBlur) {
-          socketApi?.varChange(varName, evt.target.value);
+          socketApi?.varChange(varName, evt.target.value, sequenceNumber + 1);
         }
       }}
       onChange={(evt) => {
         if (!syncOnBlur) {
-          socketApi?.varChange(varName, evt.target.value);
+          socketApi?.varChange(varName, evt.target.value, sequenceNumber + 1);
         }
+        dispatch(
+          updateLocalSequenceNumber({
+            key: varName,
+            sequenceNumber: sequenceNumber + 1,
+          })
+        );
       }}
     />
   );

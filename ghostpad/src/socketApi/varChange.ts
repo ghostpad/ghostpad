@@ -4,6 +4,7 @@ import { Socket } from "socket.io-client";
 export const varChangeWithCallback = (
   varName: string,
   value: string | string[] | number | number[] | boolean,
+  sequenceNumber: number,
   callback: (() => void) | null = null,
   socket?: Socket
 ) => {
@@ -12,6 +13,7 @@ export const varChangeWithCallback = (
     {
       ID: varName,
       value,
+      sequence_number: sequenceNumber,
     },
     () => {
       callback?.();
@@ -24,7 +26,8 @@ export const varChangeWithCallback = (
 export const varChange = (
   varName: string,
   value: string | number | boolean | string[] | number[],
+  sequenceNumber: number,
   socket?: Socket
-) => varChangeWithCallback(varName, value, null, socket);
+) => varChangeWithCallback(varName, value, sequenceNumber, null, socket);
 
 export const debouncedVarChange = debounce(varChange, 200);
