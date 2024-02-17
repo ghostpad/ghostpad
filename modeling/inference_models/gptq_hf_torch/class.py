@@ -5,14 +5,12 @@ import glob
 import json
 import torch
 import re
-import shutil
-import sys
 from typing import Dict, Union
 
 import utils
 import modeling.lazy_loader as lazy_loader
 import koboldai_settings
-from logger import logger, set_logger_verbosity
+from logger import logger
 
 from modeling.inference_models.hf_torch import HFTorchInferenceModel
 from modeling.tokenizer import GenericTokenizer
@@ -21,7 +19,7 @@ from pathlib import Path
 
 
 model_backend_type = "GPTQ"
-model_backend_name = "Legacy GPTQ"
+model_backend_name = "AutoGPTQ"
 
 
 def load_model_gptq_settings(path):
@@ -82,72 +80,6 @@ def get_gptq_version(fpath):
             logger.warning(f"GPTQ model identified as v0, but v1={v1} and v2={v2}")
         return 0, False
 
-def load_quant_offload_device_map(
-    load_quant_func, model, checkpoint, wbits, groupsize, device_map, offload_type=0, force_bias=False,
-):
-    from gptq.offload import (
-        find_layers,
-        llama_offload_forward,
-        gptneox_offload_forward,
-        gptj_offload_forward,
-        opt_offload_forward,
-        bigcode_offload_forward
-    )
-    from transformers.models.llama.modeling_llama import LlamaModel
-    from transformers.models.opt.modeling_opt import OPTModel
-    from transformers.models.gpt_neox.modeling_gpt_neox import GPTNeoXModel
-    from transformers.models.gptj.modeling_gptj import GPTJModel
-    from transformers.models.gpt_bigcode.modeling_gpt_bigcode import GPTBigCodeModel
-    model = load_quant_func(model, checkpoint, wbits, groupsize, force_bias=force_bias)
-
-    m, layers, remaining = find_layers(model)
-    type(m).non_offload_forward = type(m).forward
-
-    # Hook offload_forward into found model
-    if type(m) == LlamaModel:
-        type(m).forward = llama_offload_forward
-    elif type(m) == GPTNeoXModel:
-        type(m).forward = gptneox_offload_forward
-    elif type(m) == GPTJModel:
-        type(m).forward = gptj_offload_forward
-    elif type(m) == OPTModel:
-        type(m).forward = opt_offload_forward
-    elif type(m) == GPTBigCodeModel:
-        type(m).forward = bigcode_offload_forward
-    else:
-        raise RuntimeError(f"Model type {type(m)} not supported by CPU offloader")
-
-    layers_done = len([1 for v in device_map.values() if v != "cpu"])
-
-    m.cpu_device = torch.device("cpu")
-    m.fast_offload = layers_done > len(layers) // 2
-    m.layer_count = len(layers)
-    m.cpu_layers = len(layers) - layers_done
-    m.gpu_layers = layers_done
-    m.offload_type = offload_type
-    # HACK
-    m.primary_gpu = list(device_map.values())[0]
-
-    if "layers" not in dir(m):
-        m.layers = layers
-
-    for i in range(len(layers)):
-        dev = None
-        for key, device in device_map.items():
-            key = int(*[x for x in key.split(".") if x.isdecimal()])
-            if key == i:
-                dev = device
-                break
-        if dev is None:
-            raise ValueError
-        layers[key].to(dev, torch.float16, False)
-
-    for module in remaining:
-        module.to(m.primary_gpu)
-
-    return model
-
-
 class model_backend(HFTorchInferenceModel):
     def is_valid(self, model_name, model_path, menu_path):
         gptq_model, _, _, _, _ = load_model_gptq_settings(model_path)
@@ -161,23 +93,10 @@ class model_backend(HFTorchInferenceModel):
                     temp = json.load(f)
             else:
                 temp = {}
-            requested_parameters.append({
-                                        "uitype": "dropdown",
-                                        "unit": "text",
-                                        "label": "Implementation",
-                                        "id": "implementation",
-                                        "default": temp['implementation'] if 'implementation' in temp else 'occam',
-                                        "tooltip": "Which GPTQ provider to use?",
-                                        "menu_path": "Layers",
-                                        "children": [{'text': 'Occam GPTQ', 'value': 'occam'}, {'text': 'AutoGPTQ', 'value': 'AutoGPTQ'}],
-                                        "extra_classes": "",
-                                        "refresh_model_inputs": False
-                                    })
         return requested_parameters
 
     def set_input_parameters(self, parameters):
         super().set_input_parameters(parameters)
-        self.implementation = parameters['implementation'] if 'implementation' in parameters else "occam"
 
     def _load(self, save_model: bool, initial_load: bool) -> None:
         from transformers import AutoModelForCausalLM
@@ -289,35 +208,14 @@ class model_backend(HFTorchInferenceModel):
 
         quant_module.make_quant = make_quant
 
-
-    def _patch_quants(self, device_map) -> None:
-        # Load QuantLinears on the device corresponding to the device map
-
-        from gptq import quant_v3
-        from gptq import quant_v2
-        from gptq import quant_v1
-
-        for quant_module in [quant_v3, quant_v2, quant_v1]:
-            self._patch_quant(device_map, quant_module)
-
-
     def _get_model(self, location: str):
-        import gptq
-        from gptq.gptj import load_quant as gptj_load_quant
-        from gptq.gptneox import load_quant as gptneox_load_quant
-        from gptq.llama import load_quant as llama_load_quant
-        from gptq.opt import load_quant as opt_load_quant
-        from gptq.bigcode import load_quant as bigcode_load_quant
-        from gptq.mpt import load_quant as mpt_load_quant
-
         from transformers import AutoModelForCausalLM
 
-        gptq_model, gptq_bits, gptq_groupsize, gptq_file, gptq_version = load_model_gptq_settings(location)
+        _, gptq_bits, gptq_groupsize, gptq_file, gptq_version = load_model_gptq_settings(location)
         v2_bias = False
 
         if gptq_version < 0:
             gptq_version, v2_bias = get_gptq_version(gptq_file)
-        gptq.modelutils.set_gptq_version(gptq_version)
 
         model_type = self.get_model_type()
 
@@ -339,58 +237,36 @@ class model_backend(HFTorchInferenceModel):
                         metamodel
                     )
 
-        self._patch_quants(device_map)
-
         with lazy_loader.use_lazy_load(
             enable=self.lazy_load,
             dematerialized_modules=False,
         ):
-            if self.implementation == "occam":
-                try:
-                    if model_type == "gptj":
-                        model = load_quant_offload_device_map(gptj_load_quant, location, gptq_file, gptq_bits, gptq_groupsize, device_map, force_bias=v2_bias)
-                    elif model_type == "gpt_neox":
-                        model = load_quant_offload_device_map(gptneox_load_quant, location, gptq_file, gptq_bits, gptq_groupsize, device_map, force_bias=v2_bias)
-                    elif model_type == "llama":
-                        model = load_quant_offload_device_map(llama_load_quant, location, gptq_file, gptq_bits, gptq_groupsize, device_map, force_bias=v2_bias)
-                    elif model_type == "opt":
-                        model = load_quant_offload_device_map(opt_load_quant, location, gptq_file, gptq_bits, gptq_groupsize, device_map, force_bias=v2_bias)
-                    elif model_type == "mpt":
-                        model = load_quant_offload_device_map(mpt_load_quant, location, gptq_file, gptq_bits, gptq_groupsize, device_map, force_bias=v2_bias)
-                    elif model_type == "gpt_bigcode":
-                        model = load_quant_offload_device_map(bigcode_load_quant, location, gptq_file, gptq_bits, gptq_groupsize, device_map, force_bias=v2_bias).half()
-                    else:
-                        raise RuntimeError("Model not supported by Occam's GPTQ")
-                except:
-                    self.implementation = "AutoGPTQ"
-                    
-            if self.implementation == "AutoGPTQ":
-                try:
-                    import auto_gptq
-                    from auto_gptq import AutoGPTQForCausalLM
-                except ImportError:
-                    raise RuntimeError(f"4-bit load failed. Model type {model_type} not supported in 4-bit")
+            try:
+                import auto_gptq
+                from auto_gptq import AutoGPTQForCausalLM
+            except ImportError:
+                raise RuntimeError(f"4-bit load failed. Model type {model_type} not supported in 4-bit")
 
-                autogptq_failed = False 
-                try:
-                    model = AutoGPTQForCausalLM.from_quantized(location, model_basename=Path(gptq_file).stem, use_safetensors=gptq_file.endswith(".safetensors"), device_map=device_map)
-                except:
-                    autogptq_failed = True # Ugly hack to get it to free the VRAM of the last attempt like we do above, better suggestions welcome - Henk
-                if autogptq_failed:
-                    model = AutoGPTQForCausalLM.from_quantized(location, model_basename=Path(gptq_file).stem, use_safetensors=gptq_file.endswith(".safetensors"), device_map=device_map, inject_fused_attention=False)
-                # Patch in embeddings function
-                def get_input_embeddings(self):
-                    return self.model.get_input_embeddings()
+            autogptq_failed = False
+            try:
+                model = AutoGPTQForCausalLM.from_quantized(location, model_basename=Path(gptq_file).stem, use_safetensors=gptq_file.endswith(".safetensors"), device_map=device_map)
+            except:
+                autogptq_failed = True # Ugly hack to get it to free the VRAM of the last attempt like we do above, better suggestions welcome - Henk
+            if autogptq_failed:
+                model = AutoGPTQForCausalLM.from_quantized(location, model_basename=Path(gptq_file).stem, use_safetensors=gptq_file.endswith(".safetensors"), device_map=device_map, inject_fused_attention=False)
+            # Patch in embeddings function
+            def get_input_embeddings(self):
+                return self.model.get_input_embeddings()
 
-                type(model).get_input_embeddings = get_input_embeddings
+            type(model).get_input_embeddings = get_input_embeddings
 
-                # Patch in args support..
-                def generate(self, *args, **kwargs):
-                    """shortcut for model.generate"""
-                    with torch.inference_mode(), torch.amp.autocast(device_type=self.device.type):
-                        return self.model.generate(*args, **kwargs)
+            # Patch in args support..
+            def generate(self, *args, **kwargs):
+                """shortcut for model.generate"""
+                with torch.inference_mode(), torch.amp.autocast(device_type=self.device.type):
+                    return self.model.generate(*args, **kwargs)
 
-                type(model).generate = generate
+            type(model).generate = generate
 
         return model
 

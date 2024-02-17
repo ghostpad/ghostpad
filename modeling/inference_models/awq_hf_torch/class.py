@@ -43,10 +43,7 @@ class model_backend(HFTorchInferenceModel):
         return super().is_valid(model_name, model_path, menu_path) and not self.disable
 
     def _load(self, save_model: bool, initial_load: bool) -> None:
-        try:
-            from hf_bleeding_edge import AutoModelForCausalLM
-        except ImportError:
-            from transformers import AutoModelForCausalLM
+        from transformers import AutoModelForCausalLM
 
         self.init_model_config()
 
@@ -107,10 +104,7 @@ class model_backend(HFTorchInferenceModel):
         utils.koboldai_vars.modeldim = self.get_hidden_size()
 
     def _get_model(self, location: str):
-        try:
-            from hf_bleeding_edge import AutoModelForCausalLM
-        except ImportError:
-            from transformers import AutoModelForCausalLM
+        from transformers import AutoModelForCausalLM
 
         awq_file = get_awq_file(location)
 

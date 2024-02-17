@@ -19,10 +19,7 @@ from transformers import (
     GPT2LMHeadModel,
     LogitsProcessorList,
 )
-try:
-    from hf_bleeding_edge import AutoModelForCausalLM
-except ImportError:
-    from transformers import AutoModelForCausalLM
+from transformers import AutoModelForCausalLM
 
 import utils
 import modeling.lazy_loader as lazy_loader

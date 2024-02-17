@@ -1,37 +1,37 @@
 from __future__ import annotations
-try:
-    import torch
-    import numpy as np
-    from typing import List, Optional, Union
-    import os
-    from pathlib import Path
-    import warnings
-    import gc
+# try:
+import torch
+import numpy as np
+from typing import List, Optional, Union
+import os
+from pathlib import Path
+import warnings
+import gc
 
-    import utils
-    from logger import logger
+import utils
+from logger import logger
 
-    from modeling import warpers
-    from modeling.warpers import Warper
-    from modeling.stoppers import Stoppers
-    from modeling.post_token_hooks import PostTokenHooks
-    from modeling.inference_model import (
-        GenerationResult,
-        GenerationSettings,
-        InferenceModel,
-        ModelCapabilities,
-    )
+from modeling import warpers
+from modeling.warpers import Warper
+from modeling.stoppers import Stoppers
+from modeling.post_token_hooks import PostTokenHooks
+from modeling.inference_model import (
+    GenerationResult,
+    GenerationSettings,
+    InferenceModel,
+    ModelCapabilities,
+)
 
-    from modeling.tokenizer import GenericTokenizer
+from modeling.tokenizer import GenericTokenizer
 
 
-    from exllamav2.cache import ExLlamaV2Cache
-    from exllamav2.model import ExLlamaV2, ExLlamaV2Config
-    from transformers import LlamaTokenizer
-    from exllamav2.generator import ExLlamaV2StreamingGenerator
-    load_failed = False
-except:
-    load_failed = True
+from exllamav2.cache import ExLlamaV2Cache
+from exllamav2.model import ExLlamaV2, ExLlamaV2Config
+from transformers import LlamaTokenizer
+from exllamav2.generator import ExLlamaV2StreamingGenerator
+load_failed = False
+# except:
+#     load_failed = True
 
 model_backend_type = "GPTQ"
 model_backend_name = "ExLlama V2"
