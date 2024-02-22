@@ -175,6 +175,8 @@ class LazyloadPatches:
         is_quantized=False,
         is_safetensors=False,
         keep_in_fp32_modules=None,
+        hf_quantizer=None,
+        unexpected_keys=None,
     ):
         """
         This is modified code from the Accelerate and Transformers projects,

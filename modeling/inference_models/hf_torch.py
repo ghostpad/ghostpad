@@ -316,6 +316,9 @@ class HFTorchInferenceModel(HFInferenceModel):
             gen_in = torch.tensor(prompt_tokens, dtype=torch.long)[None]
         else:
             gen_in = prompt_tokens
+        if self.get_model_type() == "gemma":
+            prepend_token = torch.tensor([[self.tokenizer.bos_token_id]], dtype=torch.long)
+            gen_in = torch.cat((prepend_token, gen_in), dim=1)
         if not self.usegpu and not self.breakmodel:
             gen_in = gen_in.to("cpu")
         else:
@@ -363,6 +366,9 @@ class HFTorchInferenceModel(HFInferenceModel):
         logger.debug(
             "torch_raw_generate: run generator {}s".format(time.time() - start_time)
         )
+        if self.get_model_type() == "gemma":
+            # Remove the BOS token that we added
+            genout = genout[:, 1:]
 
         return GenerationResult(
             self,
