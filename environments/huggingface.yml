@@ -11,7 +11,7 @@ dependencies:
   - flask-session=0.5.0
   - gekko
   - python-socketio=5.7.2
-  - pytorch=2.0.*
+  - pytorch=2.2.*
   - python=3.10.*
   - pytorch-cuda=11.8
   - cuda-nvcc=11.8
@@ -37,12 +37,12 @@ dependencies:
     - flask-ngrok
     - flask-cors
     - lupa==2.0
-    - transformers[sentencepiece]==4.36.1
+    - transformers[sentencepiece]==4.38.0
     - Werkzeug==2.3.7
     - huggingface_hub==0.19.4
     - optimum[onnxruntime]==1.13.2
-    - safetensors==0.3.3
-    - accelerate==0.27.0
+    - safetensors==0.4.1
+    - accelerate==0.27.2
     - git+https://github.com/VE-FORBRYDERNE/mkultra
     - flask-session
     - ansi2html
@@ -62,8 +62,8 @@ dependencies:
     - https://github.com/turboderp/exllamav2/releases/download/v0.0.11/exllamav2-0.0.11-py3-none-any.whl
     - windows-curses; sys_platform == 'win32'
     - pynvml
-    - xformers==0.0.21
-    - https://github.com/Dao-AILab/flash-attention/releases/download/v2.3.4/flash_attn-2.3.4+cu118torch2.0cxx11abiFALSE-cp310-cp310-linux_x86_64.whl; sys_platform == 'linux'
+    - xformers==0.0.24
+    - https://github.com/Dao-AILab/flash-attention/releases/download/v2.5.4/flash_attn-2.5.4+cu118torch2.2cxx11abiFALSE-cp310-cp310-linux_x86_64.whl; sys_platform == 'linux'
     - omegaconf
     - https://github.com/jllllll/llama-cpp-python-cuBLAS-wheels/releases/download/cpu/llama_cpp_python-0.2.23+cpuavx-cp310-cp310-manylinux_2_31_x86_64.whl; sys_platform == "linux" and platform_machine == "x86_64" and python_version == "3.10"
     - https://github.com/jllllll/llama-cpp-python-cuBLAS-wheels/releases/download/cpu/llama_cpp_python-0.2.23+cpuavx-cp310-cp310-win_amd64.whl; sys_platform == "win32" and python_version == "3.10"

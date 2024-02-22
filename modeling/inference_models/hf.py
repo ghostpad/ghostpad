@@ -227,9 +227,8 @@ class HFInferenceModel(InferenceModel):
     def _post_load(self) -> None:
         self.badwordsids = koboldai_settings.badwordsids_default
         self.model_type = str(self.model_config.model_type)
-        
-        # These are model specific tokenizer overrides if a model has bad defaults
-        if self.model_type == "llama" or self.model_type == "mistral":
+
+        if self.model_type == "llama" or self.model_type == "mistral" or self.model_type =="gemma":
             # Note: self.tokenizer is a GenericTokenizer, and self.tokenizer.tokenizer is the actual LlamaTokenizer
             self.tokenizer.add_bos_token = False
             self.tokenizer.legacy = False
