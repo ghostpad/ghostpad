@@ -16,10 +16,6 @@ try:
     from modeling.post_token_hooks import PostTokenHooks
     from modeling.stoppers import Stoppers
 
-    from transformers import (
-        LlamaTokenizer,
-    )
-
     from llama_cpp import Llama
 
     import utils
@@ -31,6 +27,37 @@ except:
 model_backend_type = "LlamaCPP"
 model_backend_name = "Llama.cpp"
 
+class LlamaCppBatchEncoding():
+    def __init__(self, input_ids, *args, **kwargs):
+        self.input_ids = input_ids
+
+class LlamaCppTokenizer():
+    def __init__(self, model, *args, **kwargs):
+        self.tokenizer = model.tokenizer()
+        self.vocab_size = model.n_vocab()
+        self.bos_token_id = model.token_bos()
+        self.eos_token_id = model.token_eos()
+        self.bos_token = self.tokenizer.decode([self.bos_token_id])
+        self.eos_token = self.tokenizer.decode([self.eos_token_id])
+        self._koboldai_header = []
+        super().__init__(*args, **kwargs)
+
+    def __call__(self, text, *args, **kwds):
+        encoded = self.tokenizer.encode(text, *args, **kwds)
+        return LlamaCppBatchEncoding(encoded)
+
+    def encode(self, text, **kwargs) -> List[int]:
+        return self.tokenizer.encode(text, **kwargs)
+
+    def decode(self, token_ids, **kwargs) -> str:
+        is_list_or_array = isinstance(token_ids, list) or isinstance(token_ids, np.ndarray)
+        is_tensor = torch.is_tensor(token_ids)
+        if is_tensor:
+            token_ids = token_ids.cpu().numpy()
+        elif not is_list_or_array:
+            token_ids = [token_ids]
+
+        return self.tokenizer.decode(token_ids, **kwargs)
 
 class model_backend(InferenceModel):
     def __init__(self) -> None:
@@ -59,10 +86,7 @@ class model_backend(InferenceModel):
         self.tokenizer.add_bos_token = False
 
     def _get_tokenizer(self):
-        std_kwargs = {"revision": utils.koboldai_vars.revision, "cache_dir": "cache"}
-        return LlamaTokenizer.from_pretrained(
-            "KoboldAI/llama2-tokenizer", use_fast=False, **std_kwargs
-        )
+        return LlamaCppTokenizer(self.model)
 
     def _get_model_files(self, location: str):
         model_files = []
