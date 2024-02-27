@@ -7,6 +7,14 @@ set Path=%windir%\system32;%windir%;C:\Windows\System32\Wbem;%windir%\System32\W
 SET CONDA_SHLVL=
 SET PYTHONNOUSERSITE=1
 SET PYTHONPATH=
+SET VCVARS64PATH="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+
+if exist %VCVARS64PATH% (
+    echo Running vcvars64.bat
+    call %vcvars64Path%
+) else (
+    echo vcvars64.bat not found. Skipping.
+)
 
 rmdir /S /Q flask_session 2>NUL
 

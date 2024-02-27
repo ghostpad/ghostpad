@@ -21,6 +21,7 @@ https://github.com/ghostpad/ghostpad/assets/1075900/18e31eab-0292-4c34-8d10-93a4
 ### Installation
 **Windows (NVidia GPU)**
 - Install version 11.8 of the CUDA Toolkit (https://developer.nvidia.com/cuda-11-8-0-download-archive)
+- For ExLlamaV2 support, install Visual Studio Build Tools 2022 and check "Desktop development with C++" during setup (https://visualstudio.microsoft.com/downloads/?q=build+tools#build-tools-for-visual-studio-2022)
 - Clone the URL of the Github repository (git clone https://github.com/ghostpad/ghostpad.git)
 - Open install_requirements.bat as administrator.
 - Choose option 1 to use a temporary drive.
