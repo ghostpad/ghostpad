@@ -1,4 +1,4 @@
-transformers[sentencepiece]==4.38.0
+transformers[sentencepiece]==4.38.1
 huggingface_hub==0.19.4
 optimum[onnxruntime]==1.13.2
 safetensors==0.4.1
@@ -44,7 +44,7 @@ scipy
 auto-gptq
 https://github.com/casper-hansen/AutoAWQ/releases/download/v0.1.8/autoawq-0.1.8+cu118-cp310-cp310-linux_x86_64.whl; sys_platform == 'linux' and python_version == '3.10'
 https://github.com/casper-hansen/AutoAWQ/releases/download/v0.1.8/autoawq-0.1.8+cu118-cp310-cp310-win_amd64.whl; sys_platform == 'win32' and python_version == '3.10'
-exllamav2==0.0.11
+https://github.com/turboderp/exllamav2/releases/download/v0.0.14/exllamav2-0.0.14-py3-none-any.whl
 windows-curses; sys_platform == 'win32'
 pynvml
 https://github.com/Dao-AILab/flash-attention/releases/download/v2.5.4/flash_attn-2.5.4+cu118torch2.2cxx11abiFALSE-cp310-cp310-linux_x86_64.whl; sys_platform == 'linux'
