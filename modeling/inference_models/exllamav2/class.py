@@ -280,6 +280,10 @@ class model_backend(InferenceModel):
         else:
             gen_in = prompt_tokens
 
+        if self.get_model_type() == "Gemma":
+            prepend_token = torch.tensor([[self.tokenizer.bos_token_id]], dtype=torch.long)
+            gen_in = torch.cat((prepend_token, gen_in), dim=1)
+
         self.generator._gen_begin_reuse(gen_in, None)
 
         with torch.inference_mode():
@@ -347,6 +351,23 @@ class model_backend(InferenceModel):
     def _get_tokenizer(self, location: str):
         tokenizer = GenericTokenizer(LlamaTokenizer.from_pretrained(location))
         return tokenizer
+
+    def get_model_type(self) -> str:
+        if not self.model_config:
+            return "Read Only"
+
+        if not isinstance(self.model_config, dict):
+            return str(self.model_config.architecture)
+
+        model_type = self.model_config.get("architecture")
+
+        if model_type:
+            return model_type
+
+        if utils.koboldai_vars.mode.endswith("gpt2"):
+            return "gpt2"
+        else:
+            return "Unknown"
 
     def get_requested_parameters(self, model_name, model_path, menu_path, parameters = {}):
         requested_parameters = []
